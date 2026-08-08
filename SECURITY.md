@@ -15,11 +15,11 @@ Express handles headers using the `helmet` middleware. The following controls ar
 - **Clickjacking Protection**: Restricts framing to `X-Frame-Options: SAMEORIGIN`.
 - **HSTS Enforcement**: Directs modern browsers to only connect via HTTPS.
 
-### 2. Multi-Tier Rate Limiting
-To prevent abuse of APIs, artificial intelligence, and transaction gates, rate limiters are mounted using `express-rate-limit`:
-- **General APIs (`/api/`)**: Evaluates a maximum limit of **200 requests per 15 minutes** from a single IP.
-- **Fintech Gateways (`/api/payments/`)**: Prevents automated carding/checkout attacks with a limit of **15 requests per 15 minutes** per IP.
-- **AI Audit System (`/api/disputes/`)**: Prevents spamming Gemini generative model endpoints (DoS vectors) with a limit of **10 dispute filings per hour** per IP.
+### 2. Multi-Tier Rate Limiting (Relaxed for Testing)
+To prevent abuse while maintaining developer testing freedom, rate limiters are configured with high limits using `express-rate-limit`:
+- **General APIs (`/api/`)**: Configured with a limit of **10,000 requests per 15 minutes** from a single IP.
+- **Fintech Gateways (`/api/payments/`)**: Configured with a limit of **5,000 requests per 15 minutes** per IP.
+- **AI Audit System (`/api/disputes/`)**: Configured with a limit of **5,000 dispute filings per hour** per IP.
 
 ### 3. Authentication & Authorization
 - **Customer Identity**: Verified at the backend routing level using Firebase Admin SDK verification. Decoded Firebase user details populate user permissions inside MongoDB.
