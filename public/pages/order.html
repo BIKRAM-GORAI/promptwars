@@ -89,7 +89,7 @@
           const imgUrl = productMap.get(item.productId);
           let imgMarkup = '';
           if (imgUrl && (imgUrl.startsWith('http') || imgUrl.startsWith('/') || imgUrl.includes('.'))) {
-            imgMarkup = `<img src="${imgUrl}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 0.75rem;" onerror="this.onerror=null; this.outerHTML='<span style=&quot;font-size:1.8rem; margin-right:0.75rem;&quot;>📦</span>';">`;
+            imgMarkup = `<img src="${imgUrl}" alt="${item.name}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 0.75rem;" onerror="this.onerror=null; this.outerHTML='<span style=&quot;font-size:1.8rem; margin-right:0.75rem;&quot;>📦</span>';">`;
           } else {
             imgMarkup = `<span style="font-size: 1.8rem; margin-right: 0.75rem;">${imgUrl || '📦'}</span>`;
           }

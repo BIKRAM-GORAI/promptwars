@@ -362,7 +362,7 @@
           
           let imgMarkup = '';
           if (p.image && (p.image.startsWith('http') || p.image.startsWith('/') || p.image.includes('.'))) {
-            imgMarkup = `<img src="${p.image}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<span style=&quot;font-size:4rem;&quot;>📦</span>';">`;
+            imgMarkup = `<img src="${p.image}" alt="${p.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<span style=&quot;font-size:4rem;&quot;>📦</span>';">`;
           } else {
             imgMarkup = `<span style="font-size: 4rem;">${p.image || '📦'}</span>`;
           }
