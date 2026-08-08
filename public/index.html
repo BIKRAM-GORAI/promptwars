@@ -339,10 +339,13 @@
         }
       });
 
-      // Customer log out handler
+      // Customer and Admin log out handler
       document.getElementById('user-logout-btn').addEventListener('click', async (e) => {
-        if (!state.isAdminLoggedIn()) {
-          e.preventDefault();
+        e.preventDefault();
+        if (state.isAdminLoggedIn()) {
+          state.logoutAdmin();
+          window.location.reload();
+        } else {
           try {
             await signOut(auth);
             localStorage.removeItem('customerToken');
