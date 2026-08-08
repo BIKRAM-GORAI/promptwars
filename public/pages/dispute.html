@@ -41,19 +41,14 @@
 
       <form id="dispute-form" enctype="multipart/form-data">
         <div class="form-group">
-          <label class="form-label" for="order-select">Select Disputed Order</label>
-          <select class="form-select" id="order-select" name="orderId" required>
-            <option value="">-- Choose an Order --</option>
-            <!-- Filled dynamically -->
-          </select>
+          <label class="form-label">Disputed Order ID</label>
+          <div id="order-display" style="background-color: var(--bg-tertiary); padding: 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-family: monospace; font-size: 0.92rem; font-weight: 600; color: var(--text-primary);">Loading order details...</div>
+          <input type="hidden" id="hidden-order-id" name="orderId" required>
         </div>
 
-        <div class="form-group" id="product-select-group" style="display: none;">
-          <label class="form-label" for="product-select">Select Disputed Product</label>
-          <select class="form-select" id="product-select">
-            <option value="ALL">All Items / Entire Order</option>
-            <!-- Filled dynamically based on selected order -->
-          </select>
+        <div class="form-group" id="product-display-group">
+          <label class="form-label">Disputed Product</label>
+          <div id="product-display" style="background-color: var(--bg-tertiary); padding: 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">Loading product details...</div>
           <input type="hidden" id="hidden-product-id" name="productId">
         </div>
 
@@ -99,31 +94,33 @@
 
     document.getElementById('cart-count').innerText = state.getCartCount();
 
-    // Cache user orders and disputes to extract items list and identify overlapping claims
-    let userOrders = [];
+    // Cache user disputes history to cross-reference claims
     let userDisputes = [];
 
+    const getUrlParams = () => {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        orderId: params.get('orderId'),
+        productId: params.get('productId')
+      };
+    };
+
+    const { orderId: urlOrderId, productId: urlProductId } = getUrlParams();
+
+    if (!urlOrderId) {
+      alert("Error: Please submit disputes directly from your order history details.");
+      window.location.href = "/pages/orders.html";
+    }
+
     const checkExistingDispute = () => {
-      const orderSelect = document.getElementById('order-select');
-      const productSelect = document.getElementById('product-select');
-      const submitBtn = document.getElementById('submit-btn');
-      const warningDiv = document.getElementById('dispute-warning');
-      const hiddenInput = document.getElementById('hidden-product-id');
-
-      const orderId = orderSelect.value;
-      if (!orderId) {
-        warningDiv.style.display = 'none';
-        submitBtn.disabled = false;
-        submitBtn.innerText = '🚀 VERIFY & RESOLVE';
-        return;
-      }
-
-      const pId = productSelect.value;
+      const orderId = document.getElementById('hidden-order-id').value;
+      const pId = document.getElementById('hidden-product-id').value;
       const targetProductId = (pId && pId !== 'ALL' && pId !== '') ? pId : null;
 
-      if (hiddenInput) {
-        hiddenInput.value = targetProductId || 'ALL';
-      }
+      const submitBtn = document.getElementById('submit-btn');
+      const warningDiv = document.getElementById('dispute-warning');
+
+      if (!orderId) return;
 
       // Find if there is an active/resolved dispute matching this order & product combination
       const duplicate = userDisputes.find(d => {
@@ -170,92 +167,50 @@
       }
     };
 
-    const handleOrderSelection = () => {
-      const orderSelect = document.getElementById('order-select');
-      const productSelectGroup = document.getElementById('product-select-group');
-      const productSelect = document.getElementById('product-select');
-      const hiddenInput = document.getElementById('hidden-product-id');
-      
-      const params = new URLSearchParams(window.location.search);
-      const urlProductId = params.get('productId');
-      
-      const selectedId = orderSelect.value;
-      if (!selectedId) {
-        productSelectGroup.style.display = 'none';
-        if (hiddenInput) hiddenInput.value = '';
-        checkExistingDispute();
-        return;
-      }
-
-      const order = userOrders.find(o => o._id === selectedId);
-      if (order && order.items && order.items.length > 0) {
-        productSelect.innerHTML = '<option value="ALL">All Items / Entire Order</option>';
-        order.items.forEach(item => {
-          const opt = document.createElement('option');
-          opt.value = item.productId;
-          opt.innerText = `${item.name} (₹${item.price} - Qty: ${item.quantity})`;
-          if (urlProductId && urlProductId === item.productId) {
-            opt.selected = true;
-          }
-          productSelect.appendChild(opt);
-        });
-        productSelectGroup.style.display = 'block';
-
-        if (urlProductId) {
-          productSelect.disabled = true;
-          orderSelect.disabled = true;
-        }
-      } else {
-        productSelectGroup.style.display = 'none';
-      }
-
-      if (hiddenInput) {
-        const pVal = productSelect.value;
-        hiddenInput.value = (pVal && pVal !== 'ALL') ? pVal : '';
-      }
-
-      checkExistingDispute();
-    };
-
-    document.getElementById('order-select').addEventListener('change', handleOrderSelection);
-    document.getElementById('product-select').addEventListener('change', checkExistingDispute);
-
-    // Populate order dropdown
-    const populateOrders = async () => {
-      const select = document.getElementById('order-select');
-      const params = new URLSearchParams(window.location.search);
-      const urlOrderId = params.get('orderId');
-
+    // Load page data
+    const loadDisputeData = async () => {
       try {
-        // Fetch both orders and dispute history in parallel
-        const [orders, disputes] = await Promise.all([
-          api.get('/api/orders'),
+        // Fetch order details and disputes history
+        const [order, disputes] = await Promise.all([
+          api.get(`/api/orders/${urlOrderId}`),
           api.get('/api/disputes')
         ]);
-        
-        userOrders = orders;
+
         userDisputes = disputes;
 
-        userOrders.forEach(o => {
-          const opt = document.createElement('option');
-          opt.value = o._id;
-          const date = new Date(o.orderDate || o.createdAt).toLocaleDateString();
-          opt.innerText = `Order #${o._id} - ₹${o.totalAmount.toFixed(2)} (${date})`;
-          
-          if (urlOrderId && urlOrderId === o._id) {
-            opt.selected = true;
+        // 1. Populate Order Display
+        const date = new Date(order.orderDate || order.createdAt).toLocaleDateString();
+        document.getElementById('order-display').innerText = `Order #${order._id} - Total: ₹${order.totalAmount.toFixed(2)} (${date})`;
+        document.getElementById('hidden-order-id').value = order._id;
+
+        // 2. Populate Product Display
+        const hiddenProductId = document.getElementById('hidden-product-id');
+        const productDisplay = document.getElementById('product-display');
+
+        if (urlProductId && urlProductId !== 'ALL') {
+          const item = order.items.find(i => i.productId.toString() === urlProductId.toString());
+          if (item) {
+            productDisplay.innerText = `${item.name} (₹${item.price} - Qty: ${item.quantity})`;
+            hiddenProductId.value = item.productId;
+          } else {
+            productDisplay.innerText = 'All Items / Entire Order';
+            hiddenProductId.value = 'ALL';
           }
-          select.appendChild(opt);
-        });
-        
-        // Trigger select change handler to auto-load products if order is prefilled
-        handleOrderSelection();
+        } else {
+          productDisplay.innerText = 'All Items / Entire Order';
+          hiddenProductId.value = 'ALL';
+        }
+
+        // Run duplicate checking
+        checkExistingDispute();
       } catch (err) {
-        console.error('Failed to load user orders dropdown', err);
+        console.error('Failed to load order details for dispute', err);
+        alert(`Failed to load order details: ${err.message}`);
+        window.location.href = "/pages/orders.html";
       }
     };
 
-    populateOrders();
+    loadDisputeData();
 
     // Submit form
     document.getElementById('dispute-form').addEventListener('submit', async (e) => {
@@ -265,21 +220,7 @@
       submitBtn.disabled = true;
       submitBtn.innerText = 'Submitting Claim...';
 
-      const orderSelect = document.getElementById('order-select');
-      const productSelect = document.getElementById('product-select');
-      
-      const orderWasDisabled = orderSelect.disabled;
-      const productWasDisabled = productSelect.disabled;
-      
-      // Temporarily re-enable to ensure FormData serializes their selected values
-      orderSelect.disabled = false;
-      productSelect.disabled = false;
-
       const formData = new FormData(e.target);
-
-      // Restore original disabled state
-      orderSelect.disabled = orderWasDisabled;
-      productSelect.disabled = productWasDisabled;
 
       try {
         console.log('[DISPUTE] Submitting dispute form to API...');
