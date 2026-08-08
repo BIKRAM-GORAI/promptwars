@@ -116,22 +116,6 @@
             </button>
           </form>
 
-          <div style="display: flex; align-items: center; text-align: center; color: var(--text-muted); margin: 1.5rem 0 1rem; font-size: 0.8rem;">
-            <div style="flex-grow: 1; border-top: 1px solid var(--border-color); margin-right: 10px;"></div>
-            OR CONTINUE WITH
-            <div style="flex-grow: 1; border-top: 1px solid var(--border-color); margin-left: 10px;"></div>
-          </div>
-
-          <button type="button" class="btn google-btn" id="google-auth-btn">
-            <svg class="google-icon" viewBox="0 0 24 24">
-              <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.68 1.54 14.98 1 12 1 7.35 1 3.37 3.68 1.42 7.58l3.92 3.04C6.27 7.74 8.87 5.04 12 5.04z"/>
-              <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.44h6.44c-.28 1.48-1.11 2.73-2.36 3.57l3.67 2.84c2.15-1.98 3.38-4.9 3.38-8.51z"/>
-              <path fill="#FBBC05" d="M5.34 10.62c-.24-.71-.38-1.47-.38-2.26s.14-1.55.38-2.26L1.42 3.06C.51 4.88 0 6.94 0 9.12s.51 4.24 1.42 6.06l3.92-3.04a7.9 7.9 0 0 1 0-4.52z"/>
-              <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.67-2.84c-1.02.68-2.32 1.09-4.29 1.09-3.13 0-5.73-2.7-6.66-5.58l-3.92 3.04C3.37 20.32 7.35 23 12 23z"/>
-            </svg>
-            Sign In with Google
-          </button>
-
           <div style="text-align: center; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem;">
             <a href="/pages/admin/dashboard.html" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
               🔐 Open Admin Dashboard Portal
@@ -290,27 +274,6 @@
         }
       });
 
-      // Customer Google Authentication trigger (try popup first; fallback to redirect)
-      document.getElementById('google-auth-btn').addEventListener('click', async () => {
-        try {
-          console.log("[FIREBASE] Launching Google Sign-In popup...");
-          const result = await signInWithPopup(auth, googleProvider);
-          if (result && result.user) {
-            const token = await result.user.getIdToken();
-            localStorage.setItem('customerToken', token);
-            console.log("[FIREBASE] Google Sign-In resolved via popup successfully.");
-            window.location.reload();
-          }
-        } catch (err) {
-          console.warn("[FIREBASE WARNING] Google Sign-In popup blocked or failed, trying redirect:", err.message);
-          try {
-            await signInWithRedirect(auth, googleProvider);
-          } catch (redirectErr) {
-            console.error("[FIREBASE ERROR] Google Sign-In redirect fallback failed:", redirectErr.message);
-            alert(`Google Sign-In failed: ${redirectErr.message}`);
-          }
-        }
-      });
 
       // Monitor Firebase Auth State
       onAuthStateChanged(auth, async (user) => {
