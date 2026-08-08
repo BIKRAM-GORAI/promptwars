@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Disputes - ResolveAI</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        RESOLVE<span>AI</span>
+        <span class="logo-sub">Admin Portal</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/pages/admin/dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="/pages/admin/disputes.html" class="nav-link active">All Disputes</a></li>
+        <li><a href="#" class="nav-link" id="logout-btn">Log Out</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h1 style="font-size: 2rem; font-weight: 800; margin: 0;">Dispute Master Ledger</h1>
+      <a href="/pages/admin/dashboard.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; border-radius: 8px;">
+        &larr; Back to Stats
+      </a>
+    </div>
+
+    <div class="card">
+      <div style="overflow-x: auto; width: 100%;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-weight: 600;">
+              <th style="padding: 0.75rem 1rem;">Dispute ID</th>
+              <th style="padding: 0.75rem 1rem;">Customer</th>
+              <th style="padding: 0.75rem 1rem;">Disputed Order</th>
+              <th style="padding: 0.75rem 1rem;">Category</th>
+              <th style="padding: 0.75rem 1rem;">AI Confidence</th>
+              <th style="padding: 0.75rem 1rem;">Status</th>
+              <th style="padding: 0.75rem 1rem;">Created At</th>
+              <th style="padding: 0.75rem 1rem; text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="disputes-tbody">
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                Loading system disputes ledger...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ResolveAI. Hackathon Project. Powered by Google Gemini.</p>
+  </footer>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    // Verify authentication
+    if (!state.isAdminLoggedIn()) {
+      window.location.href = '/pages/admin/dashboard.html';
+    }
+
+    // Logout handler
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      state.logoutAdmin();
+      window.location.href = '/pages/admin/dashboard.html';
+    });
+
+    const loadDisputesList = async () => {
+      try {
+        const disputes = await api.get('/api/admin/disputes');
+        const tbody = document.getElementById('disputes-tbody');
+        tbody.innerHTML = '';
+
+        if (disputes.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                No disputes filed in the system yet.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        disputes.forEach(d => {
+          const date = new Date(d.createdAt).toLocaleString(undefined, {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          const confidence = d.aiClassification ? `${Math.round(d.aiClassification.confidence * 100)}%` : 'N/A';
+          const customerName = d.userId ? d.userId.name : 'Unknown User';
+
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid var(--border-color)';
+          tr.innerHTML = `
+            <td style="padding: 0.75rem 1rem;"><code>#${d._id}</code></td>
+            <td style="padding: 0.75rem 1rem;">${customerName}</td>
+            <td style="padding: 0.75rem 1rem;"><code>#${d.orderId || 'N/A'}</code></td>
+            <td style="padding: 0.75rem 1rem;">
+              <span class="badge badge-secondary" style="font-size:0.7rem; border:none; background-color:var(--bg-tertiary);">${d.category}</span>
+            </td>
+            <td style="padding: 0.75rem 1rem; font-weight:600;">${confidence}</td>
+            <td style="padding: 0.75rem 1rem;">
+              <span class="badge badge-${d.status.toLowerCase()}">${d.status}</span>
+            </td>
+            <td style="padding: 0.75rem 1rem; color:var(--text-muted); font-size:0.85rem;">${date}</td>
+            <td style="padding: 0.75rem 1rem; text-align: right;">
+              <a href="/pages/admin/dispute-detail.html?id=${d._id}" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; border-radius: 6px;">
+                Open File
+              </a>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      } catch (err) {
+        console.error('Failed to load disputes list', err);
+        if (err.status === 401 || err.status === 403) {
+          state.logoutAdmin();
+          window.location.href = '/pages/admin/dashboard.html';
+        }
+      }
+    };
+
+    loadDisputesList();
+  </script>
+</body>
+</html>

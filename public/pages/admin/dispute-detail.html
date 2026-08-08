@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispute File Details - ResolveAI</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        RESOLVE<span>AI</span>
+        <span class="logo-sub">Admin Portal</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/pages/admin/dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="/pages/admin/disputes.html" class="nav-link active">All Disputes</a></li>
+        <li><a href="#" class="nav-link" id="logout-btn">Log Out</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h1 style="font-size: 2rem; font-weight: 800; margin: 0;" id="dispute-title">Dispute File Details</h1>
+      <a href="/pages/admin/disputes.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; border-radius: 8px;">
+        &larr; Back to List
+      </a>
+    </div>
+
+    <!-- Details split grid -->
+    <div class="detail-grid" id="dispute-details-split">
+      <div style="text-align: center; grid-column: 1/-1; padding: 4rem; color: var(--text-secondary);">
+        Loading dispute file data...
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ResolveAI. Hackathon Project. Powered by Google Gemini.</p>
+  </footer>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    // Verify authentication
+    if (!state.isAdminLoggedIn()) {
+      window.location.href = '/pages/admin/dashboard.html';
+    }
+
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      state.logoutAdmin();
+      window.location.href = '/pages/admin/dashboard.html';
+    });
+
+    const getDisputeId = () => {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    };
+
+    const loadDisputeFile = async () => {
+      const disputeId = getDisputeId();
+      const container = document.getElementById('dispute-details-split');
+
+      if (!disputeId) {
+        container.innerHTML = `<div class="card" style="color:var(--accent-danger); text-align:center; grid-column:1/-1;">Missing dispute ID in request parameter.</div>`;
+        return;
+      }
+
+      try {
+        const data = await api.get(`/api/disputes/${disputeId}`);
+        const dispute = data.dispute;
+        const logs = data.logs;
+
+        document.getElementById('dispute-title').innerText = `Dispute File #${dispute._id.substring(dispute._id.length - 8).toUpperCase()}`;
+
+        // Render AI classification section
+        const aiCategory = dispute.aiClassification ? dispute.aiClassification.category : 'N/A';
+        const aiConfidence = dispute.aiClassification ? `${Math.round(dispute.aiClassification.confidence * 100)}%` : 'N/A';
+        const aiReasoning = dispute.aiClassification ? dispute.aiClassification.reasoningSummary : 'N/A';
+        const aiAction = dispute.aiClassification ? dispute.aiClassification.requestedAction : 'N/A';
+
+        // Render Evidence details
+        let evidenceHtml = `<p style="color:var(--text-muted); font-size:0.85rem; font-style:italic;">No files uploaded.</p>`;
+        if (dispute.evidenceUrl) {
+          evidenceHtml = `
+            <div style="margin-top:0.75rem;">
+              <a href="${dispute.evidenceUrl}" target="_blank" style="display:block; border-radius:var(--radius-sm); border:1px solid var(--border-color); overflow:hidden; background-color:var(--bg-tertiary); max-width: 100%; height:250px; display:flex; align-items:center; justify-content:center;">
+                <img src="${dispute.evidenceUrl}" alt="Customer Evidence Upload" style="max-width:100%; max-height:100%; object-fit:contain;">
+              </a>
+              <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:0.4rem; text-align:center;">Click image to open original upload file</span>
+            </div>
+          `;
+        }
+
+        // Render AI Evidence Analysis
+        let aiEvidenceHtml = '';
+        if (dispute.evidenceAnalysis && dispute.evidenceAnalysis.confidence > 0) {
+          const ea = dispute.evidenceAnalysis;
+          aiEvidenceHtml = `
+            <div style="border-top:1px solid var(--border-color); padding-top:1rem; margin-top:1rem;">
+              <h4 style="font-size:0.9rem; font-weight:700; margin-bottom:0.5rem; color:var(--accent-primary);">AI Image Analysis</h4>
+              <div style="display:flex; flex-direction:column; gap:0.4rem; font-size:0.85rem;">
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Damage Detected:</span>
+                  <span style="font-weight:600; color:${ea.damageDetected ? 'var(--accent-danger)' : 'var(--accent-success)'}">${ea.damageDetected ? 'YES' : 'NO'}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Damage Type:</span>
+                  <strong>${ea.damageType}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Evidence Quality:</span>
+                  <strong>${ea.evidenceQuality}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">AI Confidence:</span>
+                  <strong>${Math.round(ea.confidence * 100)}%</strong>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        // Logs timeline html
+        let timelineHtml = '';
+        logs.forEach(log => {
+          const time = new Date(log.timestamp).toLocaleTimeString();
+          const type = log.status.toLowerCase();
+          timelineHtml += `
+            <div class="timeline-item ${type}">
+              <div class="timeline-time">${time}</div>
+              <div class="timeline-action">${log.action}</div>
+              <div class="timeline-msg">${log.message}</div>
+            </div>
+          `;
+        });
+
+        // Action Panel html (only display if review is required)
+        let actionPanelHtml = '';
+        if (dispute.status !== 'RESOLVED' && dispute.status !== 'REJECTED') {
+          let reasonBanner = '';
+          if (dispute.status === 'HUMAN_REVIEW_REQUIRED' || dispute.requiresHumanReview) {
+            reasonBanner = `
+              <div style="background-color:rgba(180,83,9,0.06); border:1px solid rgba(180,83,9,0.2); border-radius:6px; padding:0.75rem; margin-bottom:1.25rem; font-size:0.85rem; color:var(--accent-warning); text-align:left; line-height:1.4;">
+                <strong>⚠️ AI Escalation Reason:</strong> ${dispute.resolutionDetails.message || 'AI flagged this claim as requiring human review or low classification confidence.'}
+              </div>
+            `;
+          }
+
+          actionPanelHtml = `
+            <div class="card" style="border-color:var(--accent-warning); margin-top:1.5rem;">
+              <h3 class="card-title" style="color:var(--accent-warning);">Action Review Board</h3>
+              <p class="card-desc" style="font-size:0.85rem; margin-bottom:1.25rem;">
+                This dispute requires manual human intervention. Select a decision option below.
+              </p>
+              
+              ${reasonBanner}
+              
+              <div class="form-group">
+                <label class="form-label" for="review-feedback">Resolution Notes / Admin Message to Customer</label>
+                <textarea class="form-textarea" id="review-feedback" placeholder="Provide reason or feedback (this will be sent in the email notification)..." required></textarea>
+              </div>
+
+              <div style="display:flex; gap:1rem; margin-top:1.5rem;">
+                <button class="btn btn-success review-action-btn" data-action="APPROVE" style="flex:1;">Approve Refund</button>
+                <button class="btn btn-danger review-action-btn" data-action="REJECT" style="flex:1;">Reject Dispute</button>
+                <button class="btn btn-secondary review-action-btn" data-action="REQUEST_INFO" style="flex:1;">Request Info</button>
+              </div>
+            </div>
+          `;
+        } else {
+          let reasonBanner = '';
+          let cardBorderColor = 'var(--accent-success)';
+          let titleColor = 'var(--accent-success)';
+          
+          if (dispute.status === 'REJECTED') {
+            cardBorderColor = 'var(--accent-danger)';
+            titleColor = 'var(--accent-danger)';
+            reasonBanner = `
+              <div style="background-color:rgba(190,18,60,0.06); border:1px solid rgba(190,18,60,0.2); border-radius:6px; padding:0.75rem; margin-bottom:1.25rem; font-size:0.85rem; color:var(--accent-danger); text-align:left; line-height:1.4;">
+                <strong>❌ AI Rejection Reason:</strong> ${dispute.resolutionDetails.message || 'This dispute was rejected by business policy criteria.'}
+              </div>
+            `;
+          }
+
+          actionPanelHtml = `
+            <div class="card" style="border-color:${cardBorderColor}; margin-top:1.5rem;">
+              <h3 class="card-title" style="color:${titleColor};">${dispute.status === 'REJECTED' ? 'Case Declined' : 'Case Finalized'}</h3>
+              <p class="card-desc" style="font-size:0.85rem; margin-bottom:1rem;">
+                No manual actions are required. Dispute status is finalized.
+              </p>
+              
+              ${reasonBanner}
+              
+              <div style="font-size:0.9rem; text-align:left; background-color:var(--bg-tertiary); padding:1rem; border-radius:8px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                  <span style="color:var(--text-secondary);">Resolution:</span>
+                  <strong>${dispute.resolutionDetails.action}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem;">
+                  <span style="color:var(--text-secondary);">Refunded Amount:</span>
+                  <strong>₹${dispute.resolutionDetails.amount.toFixed(2)}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Resolution Message:</span>
+                  <span style="font-style:italic;">"${dispute.resolutionDetails.message}"</span>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        container.innerHTML = `
+          <!-- Left Col: Dispute Info -->
+          <div style="display:flex; flex-direction:column; gap:1.5rem;">
+            <div class="card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h3 class="card-title" style="margin:0;">Dispute Dossier</h3>
+                <span class="badge badge-${dispute.status.toLowerCase()}">${dispute.status}</span>
+              </div>
+
+              <div style="display:flex; flex-direction:column; gap:0.75rem; font-size:0.9rem;">
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                  <span style="color:var(--text-secondary);">Dispute ID:</span>
+                  <code>${dispute._id}</code>
+                </div>
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                  <span style="color:var(--text-secondary);">Disputed Order ID:</span>
+                  <code>${dispute.orderId || 'N/A'}</code>
+                </div>
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                  <span style="color:var(--text-secondary);">Disputed Item:</span>
+                  <strong>${dispute.productId ? `${dispute.productId.name} (₹${dispute.productId.price})` : 'All Items / Entire Order'}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                  <span style="color:var(--text-secondary);">Customer:</span>
+                  <strong>${dispute.userId ? dispute.userId.name : 'Unknown'} (${dispute.userId ? dispute.userId.email : 'N/A'})</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                  <span style="color:var(--text-secondary);">Disclosed Category:</span>
+                  <strong>${dispute.category}</strong>
+                </div>
+                <div>
+                  <span style="color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Dispute Description:</span>
+                  <blockquote style="background-color:var(--bg-tertiary); padding:0.75rem; border-radius:6px; font-style:italic;">
+                    "${dispute.description}"
+                  </blockquote>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 class="card-title" style="font-size:1.1rem; margin-bottom:0.5rem;">Photographic Evidence</h3>
+              ${evidenceHtml}
+            </div>
+          </div>
+
+          <!-- Right Col: AI & Actions & Timeline -->
+          <div style="display:flex; flex-direction:column; gap:1.5rem;">
+            <div class="card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(21, 27, 44, 0.9) 100%);">
+              <h3 class="card-title" style="font-size:1.15rem; color:var(--text-primary);">Gemini AI Analysis Audit</h3>
+              
+              <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem; margin-top:1rem;">
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Classified Category:</span>
+                  <strong style="color:var(--accent-primary);">${aiCategory}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">AI Classifier Confidence:</span>
+                  <strong>${aiConfidence}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Suggested Action:</span>
+                  <strong>${aiAction}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Escalation Flagged:</span>
+                  <span style="font-weight:600; color:${dispute.requiresHumanReview ? 'var(--accent-warning)' : 'var(--accent-success)'}">${dispute.requiresHumanReview ? 'YES' : 'NO'}</span>
+                </div>
+                <div style="margin-top:0.5rem;">
+                  <span style="color:var(--text-secondary); display:block; margin-bottom:0.25rem;">AI Reasoning Heuristics:</span>
+                  <p style="background-color:rgba(255,255,255,0.03); border:1px solid var(--border-color); padding:0.6rem; border-radius:6px; font-size:0.85rem; color:var(--text-secondary);">${aiReasoning}</p>
+                </div>
+              </div>
+
+              ${aiEvidenceHtml}
+            </div>
+
+            ${actionPanelHtml}
+
+            <!-- Automation Timeline Log -->
+            <div class="card">
+              <h3 class="card-title" style="font-size:1.1rem; margin-bottom:1rem;">Resolution Timeline</h3>
+              <div class="timeline" style="margin:0; padding-left:1.5rem;">
+                ${timelineHtml}
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Attach action buttons listeners
+        const btns = container.querySelectorAll('.review-action-btn');
+        btns.forEach(btn => {
+          btn.addEventListener('click', handleReviewAction);
+        });
+
+      } catch (err) {
+        console.error('Failed to load dispute details', err);
+        container.innerHTML = `<div class="card" style="color:var(--accent-danger); text-align:center; grid-column:1/-1;">Error: ${err.message}</div>`;
+      }
+    };
+
+    const handleReviewAction = async (e) => {
+      const action = e.currentTarget.getAttribute('data-action');
+      const feedback = document.getElementById('review-feedback').value;
+      const disputeId = getDisputeId();
+
+      if (!feedback) {
+        alert('Please provide feedback/notes for the customer first!');
+        return;
+      }
+
+      if (!confirm(`Are you sure you want to resolve this claim as: ${action}?`)) {
+        return;
+      }
+
+      // Disable buttons
+      const btns = document.querySelectorAll('.review-action-btn');
+      btns.forEach(b => b.disabled = true);
+
+      try {
+        console.log(`[REVIEW] Submitting manual admin decision ${action}...`);
+        await api.post(`/api/admin/disputes/${disputeId}/review`, {
+          action,
+          feedback
+        });
+        
+        alert(`Dispute manually updated to: ${action}`);
+        loadDisputeFile(); // Reload page view
+      } catch (err) {
+        console.error(err);
+        alert(`Review action failed: ${err.message}`);
+        btns.forEach(b => b.disabled = false);
+      }
+    };
+
+    loadDisputeFile();
+  </script>
+</body>
+</html>

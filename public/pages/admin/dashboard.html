@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - ResolveAI</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <style>
+    /* Section selection sub-tabs */
+    .tab-container {
+      display: flex;
+      gap: 0.75rem;
+      margin: 1.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem;
+    }
+    .tab-btn {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 0.5rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .tab-btn:hover {
+      background: var(--bg-tertiary);
+    }
+    .tab-btn.active {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: #fff;
+    }
+    .inventory-img-placeholder {
+      width: 40px;
+      height: 40px;
+      background: var(--bg-tertiary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    .inventory-img-thumbnail {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        RESOLVE<span>AI</span>
+        <span class="logo-sub">Admin Portal</span>
+      </a>
+      <ul class="nav-links" id="admin-nav" style="display: none;">
+        <li><a href="/pages/admin/dashboard.html" class="nav-link active">Dashboard</a></li>
+        <li><a href="/pages/admin/disputes.html" class="nav-link">All Disputes</a></li>
+        <li><a href="#" class="nav-link" id="logout-btn">Log Out</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <!-- Login Card (shown if not authenticated) -->
+    <div id="login-container" style="max-width: 450px; margin: 4rem auto;">
+      <div class="card">
+        <h2 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; text-align: center;">Admin Log In</h2>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">
+          Verify credentials from `.env` configuration file to access admin panel.
+        </p>
+
+        <form id="login-form">
+          <div class="form-group">
+            <label class="form-label" for="login-email">Email Address</label>
+            <input type="email" class="form-input" id="login-email" required value="admin@resolveai.com">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="login-password">Password</label>
+            <input type="password" class="form-input" id="login-password" required value="adminpassword123">
+          </div>
+          <button type="submit" class="btn btn-primary" id="login-submit-btn" style="width: 100%; margin-top: 1rem;">
+            Log In
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Dashboard Content (hidden initially) -->
+    <div id="dashboard-container" style="display: none;">
+      <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 1rem;">System Statistics</h1>
+
+      <!-- Stats Cards Row -->
+      <div class="stats-grid">
+        <div class="card stat-card">
+          <h4 style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Total Claims</h4>
+          <div class="stat-val primary" id="stat-total">0</div>
+        </div>
+        <div class="card stat-card">
+          <h4 style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Resolved Cases</h4>
+          <div class="stat-val success" id="stat-resolved">0</div>
+        </div>
+        <div class="card stat-card">
+          <h4 style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Pending Review</h4>
+          <div class="stat-val warning" id="stat-pending">0</div>
+        </div>
+        <div class="card stat-card">
+          <h4 style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Automation Rate</h4>
+          <div class="stat-val success" id="stat-rate">0%</div>
+        </div>
+        <div class="card stat-card">
+          <h4 style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-transform: uppercase;">Refunded Total</h4>
+          <div class="stat-val" id="stat-refunds" style="font-size: 1.8rem; padding-top: 0.4rem;">₹0.00</div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="tab-container">
+        <button class="tab-btn active" id="tab-disputes">Disputes Center</button>
+        <button class="tab-btn" id="tab-inventory">Inventory Manager</button>
+      </div>
+
+      <!-- Panel 1: Disputes Management -->
+      <div id="panel-disputes">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 class="card-title" style="margin-bottom: 0;">Recent Disputes</h3>
+            <a href="/pages/admin/disputes.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; font-size: 0.85rem; border-radius: 8px;">
+              View All Disputes
+            </a>
+          </div>
+          
+          <div style="overflow-x: auto; width: 100%;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary); font-weight: 600;">
+                  <th style="padding: 0.75rem 1rem;">Dispute ID</th>
+                  <th style="padding: 0.75rem 1rem;">Customer</th>
+                  <th style="padding: 0.75rem 1rem;">Category</th>
+                  <th style="padding: 0.75rem 1rem;">AI Confidence</th>
+                  <th style="padding: 0.75rem 1rem;">Status</th>
+                  <th style="padding: 0.75rem 1rem;">Created At</th>
+                  <th style="padding: 0.75rem 1rem; text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="disputes-tbody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    Loading recent disputes...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: Inventory Management -->
+      <div id="panel-inventory" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; margin-top: 1rem;">
+          <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0;">Store Products Catalog</h2>
+          <button class="btn btn-primary" id="add-product-btn" style="padding: 0.45rem 1.2rem; font-size: 0.85rem; border-radius: 8px;">
+            + Add New Product
+          </button>
+        </div>
+        
+        <div class="product-grid" id="inventory-grid">
+          <div style="text-align: center; grid-column: 1/-1; padding: 3rem; color: var(--text-secondary);">
+            Loading product catalog...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Product Add/Edit Modal Overlay -->
+    <div id="product-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); z-index: 1000; align-items: center; justify-content: center;">
+      <div class="card" style="width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h3 class="card-title" id="modal-title" style="margin-bottom: 0;">Add New Product</h3>
+          <button type="button" class="btn btn-secondary" id="close-modal-btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 6px;">✕</button>
+        </div>
+        
+        <form id="product-form">
+          <input type="hidden" id="form-product-id">
+          
+          <div class="form-group">
+            <label class="form-label" for="prod-name">Product Name</label>
+            <input type="text" class="form-input" id="prod-name" placeholder="e.g. Mechanical Keyboard" required>
+          </div>
+          
+          <div style="display: flex; gap: 1rem;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="prod-category">Category</label>
+              <input type="text" class="form-input" id="prod-category" placeholder="e.g. Electronics" required>
+            </div>
+            
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="prod-price">Price (₹)</label>
+              <input type="number" step="0.01" class="form-input" id="prod-price" placeholder="e.g. 1499" required>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 1rem;">
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="prod-stock">Stock Quantity</label>
+              <input type="number" class="form-input" id="prod-stock" placeholder="e.g. 50" required>
+            </div>
+            
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" for="prod-image">Product Image File</label>
+              <input type="file" class="form-input" id="prod-image" accept="image/*" style="padding: 0.35rem;">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="prod-desc">Description</label>
+            <textarea class="form-input" id="prod-desc" rows="3" placeholder="Describe the item details..." required></textarea>
+          </div>
+          
+          <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary" id="cancel-modal-btn">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="save-modal-btn">Save Product</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ResolveAI. Hackathon Project. Powered by Google Gemini.</p>
+  </footer>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    const loginContainer = document.getElementById('login-container');
+    const dashboardContainer = document.getElementById('dashboard-container');
+    const adminNav = document.getElementById('admin-nav');
+
+    // Tab buttons and panel views
+    const tabDisputes = document.getElementById('tab-disputes');
+    const tabInventory = document.getElementById('tab-inventory');
+    const panelDisputes = document.getElementById('panel-disputes');
+    const panelInventory = document.getElementById('panel-inventory');
+
+    const updateView = () => {
+      if (state.isAdminLoggedIn()) {
+        loginContainer.style.display = 'none';
+        dashboardContainer.style.display = 'block';
+        adminNav.style.display = 'flex';
+        loadDashboardData();
+        if (tabInventory.classList.contains('active')) {
+          loadInventoryCatalog();
+        }
+      } else {
+        loginContainer.style.display = 'block';
+        dashboardContainer.style.display = 'none';
+        adminNav.style.display = 'none';
+      }
+    };
+
+    // Toggle panels
+    tabDisputes.addEventListener('click', () => {
+      tabDisputes.classList.add('active');
+      tabInventory.classList.remove('active');
+      panelDisputes.style.display = 'block';
+      panelInventory.style.display = 'none';
+      loadDashboardData();
+    });
+
+    tabInventory.addEventListener('click', () => {
+      tabInventory.classList.add('active');
+      tabDisputes.classList.remove('active');
+      panelInventory.style.display = 'block';
+      panelDisputes.style.display = 'none';
+      loadInventoryCatalog();
+    });
+
+    // Form submission for Login
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('login-submit-btn');
+
+      btn.disabled = true;
+      btn.innerText = 'Verifying...';
+
+      try {
+        const response = await api.post('/api/admin/login', { email, password });
+        localStorage.setItem('adminToken', response.token);
+        localStorage.setItem('adminEmail', response.email);
+        localStorage.setItem('adminName', response.name);
+        
+        updateView();
+      } catch (err) {
+        console.error(err);
+        alert(`Login failed: ${err.message}`);
+        btn.disabled = false;
+        btn.innerText = 'Log In';
+      }
+    });
+
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      state.logoutAdmin();
+      updateView();
+    });
+
+    // Fetch and bind stats and disputes list
+    const loadDashboardData = async () => {
+      try {
+        // Load stats
+        const stats = await api.get('/api/admin/stats');
+        document.getElementById('stat-total').innerText = stats.totalDisputes;
+        document.getElementById('stat-resolved').innerText = stats.resolvedDisputes;
+        document.getElementById('stat-pending').innerText = stats.humanReviews;
+        document.getElementById('stat-rate').innerText = `${stats.automationRate}%`;
+        document.getElementById('stat-refunds').innerText = `₹${stats.totalRefundedAmount.toFixed(2)}`;
+
+        // Load disputes
+        const disputes = await api.get('/api/admin/disputes');
+        const tbody = document.getElementById('disputes-tbody');
+        tbody.innerHTML = '';
+
+        if (disputes.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                No disputes filed in the system yet.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        const recentDisputes = disputes.slice(0, 6);
+        recentDisputes.forEach(d => {
+          const date = new Date(d.createdAt).toLocaleDateString();
+          const confidence = d.aiClassification ? `${Math.round(d.aiClassification.confidence * 100)}%` : 'N/A';
+          const customerName = d.userId ? d.userId.name : 'Unknown User';
+
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid var(--border-color)';
+          tr.innerHTML = `
+            <td style="padding: 0.75rem 1rem;"><code>#${d._id}</code></td>
+            <td style="padding: 0.75rem 1rem;">${customerName}</td>
+            <td style="padding: 0.75rem 1rem;">
+              <span class="badge badge-secondary" style="font-size:0.7rem; border:none; background-color:var(--bg-tertiary);">${d.category}</span>
+            </td>
+            <td style="padding: 0.75rem 1rem; font-weight:600;">${confidence}</td>
+            <td style="padding: 0.75rem 1rem;">
+              <span class="badge badge-${d.status.toLowerCase()}">${d.status}</span>
+            </td>
+            <td style="padding: 0.75rem 1rem; color:var(--text-muted); font-size:0.85rem;">${date}</td>
+            <td style="padding: 0.75rem 1rem; text-align: right;">
+              <a href="/pages/admin/dispute-detail.html?id=${d._id}" class="btn btn-secondary" style="padding: 0.3rem 0.75rem; font-size: 0.75rem; border-radius: 6px;">
+                Open File
+              </a>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+      } catch (err) {
+        console.error('Failed to load dashboard data', err);
+        if (err.status === 401 || err.status === 403) {
+          state.logoutAdmin();
+          updateView();
+        }
+      }
+    };
+
+    // Load inventory products
+    let cachedProducts = [];
+    const loadInventoryCatalog = async () => {
+      const grid = document.getElementById('inventory-grid');
+      grid.innerHTML = `
+        <div style="text-align: center; grid-column: 1/-1; padding: 3rem; color: var(--text-secondary);">
+          Loading products catalog...
+        </div>
+      `;
+      
+      try {
+        const products = await api.get('/api/products');
+        cachedProducts = products;
+        grid.innerHTML = '';
+        
+        if (products.length === 0) {
+          grid.innerHTML = `
+            <div style="text-align: center; grid-column: 1/-1; padding: 3rem; color: var(--text-secondary);">
+              No products found in the catalog.
+            </div>
+          `;
+          return;
+        }
+        
+        products.forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.style.display = 'flex';
+          card.style.flexDirection = 'column';
+          card.style.gap = '0.75rem';
+          card.style.padding = '1rem';
+          card.style.position = 'relative';
+          
+          let imgMarkup = '';
+          if (p.image && (p.image.startsWith('http') || p.image.startsWith('/') || p.image.includes('.'))) {
+            imgMarkup = `<img src="${p.image}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<span style=&quot;font-size:3rem;&quot;>📦</span>';">`;
+          } else {
+            imgMarkup = `<span style="font-size:3rem;">${p.image || '📦'}</span>`;
+          }
+          
+          card.innerHTML = `
+            <!-- Image box -->
+            <div style="height: 120px; background: var(--bg-tertiary); border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+              ${imgMarkup}
+              <span class="badge badge-secondary" style="position: absolute; top: 8px; left: 8px; font-size: 0.7rem; border: none; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px);">${p.category}</span>
+            </div>
+
+            <!-- Details -->
+            <div>
+              <h4 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.name}">${p.name}</h4>
+              <p style="color: var(--text-secondary); font-size: 0.8rem; height: 38px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 0.5rem;" title="${p.description}">${p.description}</p>
+            </div>
+
+            <!-- Price & Stock -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; border-top: 1px solid var(--border-color); padding-top: 0.75rem;">
+              <div style="font-size: 1.2rem; font-weight: 800; color: var(--accent-primary);">₹${p.price.toFixed(2)}</div>
+              <div class="badge ${p.stock > 10 ? 'badge-resolved' : 'badge-more_info_required'}" style="font-size: 0.75rem; border: none; padding: 0.25rem 0.5rem;">${p.stock} units</div>
+            </div>
+
+            <!-- Actions buttons -->
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+              <button class="btn btn-secondary edit-product-row-btn" style="flex: 1; padding: 0.4rem; font-size: 0.75rem; border-radius: 6px;">Edit</button>
+              <button class="btn btn-secondary delete-product-row-btn" style="flex: 1; padding: 0.4rem; font-size: 0.75rem; border-radius: 6px; color: var(--accent-danger); border-color: rgba(239, 68, 68, 0.2);">Delete</button>
+            </div>
+          `;
+          
+          card.querySelector('.edit-product-row-btn').addEventListener('click', () => openProductModal(p._id));
+          card.querySelector('.delete-product-row-btn').addEventListener('click', () => deleteProductCatalog(p._id));
+          
+          grid.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+        grid.innerHTML = `
+          <div style="text-align: center; grid-column: 1/-1; padding: 3rem; color: var(--accent-danger);">
+            Failed to load product catalog: ${err.message}
+          </div>
+        `;
+      }
+    };
+
+    // Product Modal control
+    const productModal = document.getElementById('product-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const productForm = document.getElementById('product-form');
+    
+    const openProductModal = (productId = null) => {
+      productForm.reset();
+      document.getElementById('form-product-id').value = productId || '';
+      
+      if (productId) {
+        modalTitle.innerText = 'Edit Store Product';
+        const prod = cachedProducts.find(p => p._id === productId);
+        if (prod) {
+          document.getElementById('prod-name').value = prod.name;
+          document.getElementById('prod-category').value = prod.category;
+          document.getElementById('prod-price').value = prod.price;
+          document.getElementById('prod-stock').value = prod.stock;
+          document.getElementById('prod-desc').value = prod.description;
+        }
+      } else {
+        modalTitle.innerText = 'Add New Product';
+      }
+      
+      productModal.style.display = 'flex';
+    };
+
+    const closeProductModal = () => {
+      productModal.style.display = 'none';
+    };
+
+    document.getElementById('add-product-btn').addEventListener('click', () => openProductModal(null));
+    document.getElementById('close-modal-btn').addEventListener('click', closeProductModal);
+    document.getElementById('cancel-modal-btn').addEventListener('click', closeProductModal);
+
+    // Save product (Add or Edit)
+    document.getElementById('product-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const productId = document.getElementById('form-product-id').value;
+      const saveBtn = document.getElementById('save-modal-btn');
+      
+      const name = document.getElementById('prod-name').value;
+      const category = document.getElementById('prod-category').value;
+      const price = document.getElementById('prod-price').value;
+      const stock = document.getElementById('prod-stock').value;
+      const description = document.getElementById('prod-desc').value;
+      const imageFile = document.getElementById('prod-image').files[0];
+      
+      saveBtn.disabled = true;
+      saveBtn.innerText = 'Saving product...';
+      
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('category', category);
+      formData.append('price', price);
+      formData.append('stock', stock);
+      formData.append('description', description);
+      if (imageFile) {
+        formData.append('image', imageFile);
+      }
+      
+      try {
+        if (productId) {
+          // Update
+          await api.put(`/api/admin/products/${productId}`, formData);
+          alert('Product details updated successfully!');
+        } else {
+          // Create
+          await api.post('/api/admin/products', formData);
+          alert('New product added to catalog successfully!');
+        }
+        
+        closeProductModal();
+        loadInventoryCatalog();
+      } catch (err) {
+        console.error(err);
+        alert(`Failed to save product: ${err.message}`);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = 'Save Product';
+      }
+    });
+
+    // Delete product
+    const deleteProductCatalog = async (productId) => {
+      const prod = cachedProducts.find(p => p._id === productId);
+      if (!prod) return;
+      
+      if (confirm(`Are you sure you want to permanently delete "${prod.name}" from the store catalog?`)) {
+        try {
+          await api.delete(`/api/admin/products/${productId}`);
+          alert('Product deleted successfully.');
+          loadInventoryCatalog();
+        } catch (err) {
+          console.error(err);
+          alert(`Failed to delete product: ${err.message}`);
+        }
+      }
+    };
+
+    updateView();
+  </script>
+</body>
+</html>

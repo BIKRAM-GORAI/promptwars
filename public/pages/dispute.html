@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File a Dispute - ResolveAI Store</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        RESOLVE<span>AI</span>
+        <span class="logo-sub">Store</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Shop</a></li>
+        <li><a href="/pages/orders.html" class="nav-link active">My Orders</a></li>
+        <li>
+          <a href="/pages/cart.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; border-radius: 8px;">
+            Cart (<span id="cart-count">0</span>)
+          </a>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <main style="max-width: 700px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+      <h1 style="font-size: 2rem; font-weight: 800;">Submit a Dispute</h1>
+      <a href="/pages/orders.html" class="btn btn-secondary" style="padding:0.4rem 1rem; border-radius:8px;">Cancel</a>
+    </div>
+
+    <div class="card">
+      <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:1.5rem;">
+        Complete the form below. Once submitted, ResolveAI's autonomous agent will classify your claim, check transaction history, run policy heuristics, and attempt to resolve it instantly.
+      </p>
+
+      <form id="dispute-form" enctype="multipart/form-data">
+        <div class="form-group">
+          <label class="form-label" for="order-select">Select Disputed Order</label>
+          <select class="form-select" id="order-select" name="orderId" required>
+            <option value="">-- Choose an Order --</option>
+            <!-- Filled dynamically -->
+          </select>
+        </div>
+
+        <div class="form-group" id="product-select-group" style="display: none;">
+          <label class="form-label" for="product-select">Select Disputed Product</label>
+          <select class="form-select" id="product-select" name="productId">
+            <option value="ALL">All Items / Entire Order</option>
+            <!-- Filled dynamically based on selected order -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dispute-category">Dispute Category (Optional, AI will classify)</label>
+          <select class="form-select" id="dispute-category" name="category">
+            <option value="">Let AI Classify Automatically</option>
+            <option value="DOUBLE_CHARGE">Double Charge / Duplicate Payment</option>
+            <option value="PAYMENT_DISPUTE">Payment Made, Order Not Created</option>
+            <option value="DAMAGED_PRODUCT">Damaged / Broken Product</option>
+            <option value="REFUND_NOT_RECEIVED">Refund Promised, Not Received</option>
+            <option value="REFUND_REQUEST">Standard Refund Request</option>
+            <option value="OTHER">Other Issue</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="dispute-desc">Describe the Problem</label>
+          <textarea class="form-textarea" id="dispute-desc" name="description" placeholder="Provide as much detail as possible (e.g. 'I was charged twice for order 1024' or 'My keyboard was received damaged')." required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="evidence-file">Photo Evidence (Required for damaged products)</label>
+          <input type="file" class="form-input" id="evidence-file" name="evidence" accept="image/*" style="padding: 0.5rem;">
+        </div>
+
+        <div id="dispute-warning" style="display: none; padding: 0.75rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem; font-size: 0.85rem; font-weight: 600; text-align: left;"></div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn" style="width: 100%; margin-top: 1rem;">
+          🚀 VERIFY & RESOLVE
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ResolveAI. Hackathon Project. Powered by Google Gemini.</p>
+  </footer>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    document.getElementById('cart-count').innerText = state.getCartCount();
+
+    // Cache user orders and disputes to extract items list and identify overlapping claims
+    let userOrders = [];
+    let userDisputes = [];
+
+    const checkExistingDispute = () => {
+      const orderSelect = document.getElementById('order-select');
+      const productSelect = document.getElementById('product-select');
+      const submitBtn = document.getElementById('submit-btn');
+      const warningDiv = document.getElementById('dispute-warning');
+
+      const orderId = orderSelect.value;
+      if (!orderId) {
+        warningDiv.style.display = 'none';
+        submitBtn.disabled = false;
+        submitBtn.innerText = '🚀 VERIFY & RESOLVE';
+        return;
+      }
+
+      const pId = productSelect.value;
+      const targetProductId = (pId && pId !== 'ALL' && pId !== '') ? pId : null;
+
+      // Find if there is an active/resolved dispute matching this order & product combination
+      const duplicate = userDisputes.find(d => {
+        const dOrderId = d.orderId && typeof d.orderId === 'object' ? d.orderId._id : d.orderId;
+        const dProductId = d.productId && typeof d.productId === 'object' ? d.productId._id : d.productId;
+        
+        const matchesOrder = dOrderId && dOrderId.toString() === orderId.toString();
+        
+        // Handle matching either specific products or both representing 'ALL' items (null)
+        const matchesProduct = (!targetProductId && !dProductId) || 
+                              (dProductId && targetProductId && dProductId.toString() === targetProductId.toString());
+        
+        return matchesOrder && matchesProduct && ['PENDING', 'RESOLVED', 'HUMAN_REVIEW_REQUIRED', 'MORE_INFO_REQUIRED'].includes(d.status);
+      });
+
+      if (duplicate) {
+        warningDiv.style.display = 'block';
+        submitBtn.disabled = true;
+        
+        let statusText = duplicate.status.toLowerCase().replace(/_/g, ' ');
+        if (duplicate.status === 'RESOLVED') {
+          warningDiv.style.backgroundColor = 'rgba(21, 128, 61, 0.08)';
+          warningDiv.style.borderColor = 'rgba(21, 128, 61, 0.2)';
+          warningDiv.style.color = 'var(--accent-success)';
+          warningDiv.innerText = '💰 A refund has already been successfully resolved and processed for this product.';
+          submitBtn.innerText = 'Refund Already Processed';
+        } else {
+          warningDiv.style.backgroundColor = 'rgba(234, 88, 12, 0.08)';
+          warningDiv.style.borderColor = 'rgba(234, 88, 12, 0.2)';
+          warningDiv.style.color = 'var(--accent-warning)';
+          
+          if (duplicate.status === 'PENDING') {
+            warningDiv.innerText = '⏳ A dispute claim for this product is currently under process by our AI Resolver.';
+            submitBtn.innerText = 'Dispute Under Process';
+          } else {
+            warningDiv.innerText = `⏳ A dispute claim for this product is currently in progress (${statusText}).`;
+            submitBtn.innerText = 'Dispute In Progress';
+          }
+        }
+      } else {
+        warningDiv.style.display = 'none';
+        submitBtn.disabled = false;
+        submitBtn.innerText = '🚀 VERIFY & RESOLVE';
+      }
+    };
+
+    const handleOrderSelection = () => {
+      const orderSelect = document.getElementById('order-select');
+      const productSelectGroup = document.getElementById('product-select-group');
+      const productSelect = document.getElementById('product-select');
+      
+      const selectedId = orderSelect.value;
+      if (!selectedId) {
+        productSelectGroup.style.display = 'none';
+        checkExistingDispute();
+        return;
+      }
+
+      const order = userOrders.find(o => o._id === selectedId);
+      if (order && order.items && order.items.length > 0) {
+        productSelect.innerHTML = '<option value="ALL">All Items / Entire Order</option>';
+        order.items.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.productId;
+          opt.innerText = `${item.name} (₹${item.price} - Qty: ${item.quantity})`;
+          productSelect.appendChild(opt);
+        });
+        productSelectGroup.style.display = 'block';
+      } else {
+        productSelectGroup.style.display = 'none';
+      }
+      checkExistingDispute();
+    };
+
+    document.getElementById('order-select').addEventListener('change', handleOrderSelection);
+    document.getElementById('product-select').addEventListener('change', checkExistingDispute);
+
+    // Populate order dropdown
+    const populateOrders = async () => {
+      const select = document.getElementById('order-select');
+      const params = new URLSearchParams(window.location.search);
+      const urlOrderId = params.get('orderId');
+
+      try {
+        // Fetch both orders and dispute history in parallel
+        const [orders, disputes] = await Promise.all([
+          api.get('/api/orders'),
+          api.get('/api/disputes')
+        ]);
+        
+        userOrders = orders;
+        userDisputes = disputes;
+
+        userOrders.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o._id;
+          const date = new Date(o.orderDate || o.createdAt).toLocaleDateString();
+          opt.innerText = `Order #${o._id} - ₹${o.totalAmount.toFixed(2)} (${date})`;
+          
+          if (urlOrderId && urlOrderId === o._id) {
+            opt.selected = true;
+          }
+          select.appendChild(opt);
+        });
+        
+        // Trigger select change handler to auto-load products if order is prefilled
+        handleOrderSelection();
+      } catch (err) {
+        console.error('Failed to load user orders dropdown', err);
+      }
+    };
+
+    populateOrders();
+
+    // Submit form
+    document.getElementById('dispute-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Submitting Claim...';
+
+      const formData = new FormData(e.target);
+
+      try {
+        console.log('[DISPUTE] Submitting dispute form to API...');
+        const result = await api.post('/api/disputes', formData);
+        
+        console.log('[DISPUTE] Dispute created. Redirecting to analyzer...');
+        window.location.href = `/pages/analyzing.html?disputeId=${result._id}`;
+      } catch (err) {
+        console.error(err);
+        alert(`Dispute submission failed: ${err.message}`);
+        submitBtn.disabled = false;
+        submitBtn.innerText = '🚀 VERIFY & RESOLVE';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyzing Dispute - ResolveAI Store</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        RESOLVE<span>AI</span>
+        <span class="logo-sub">Store</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Shop</a></li>
+        <li><a href="/pages/orders.html" class="nav-link">My Orders</a></li>
+        <li>
+          <a href="/pages/cart.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; border-radius: 8px;">
+            Cart (<span id="cart-count">0</span>)
+          </a>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <main style="max-width: 750px;">
+    <div class="analyzing-box" id="analysis-box">
+      <div id="loader-icon" class="analysis-icon" style="width: 60px; height: 60px; border-width: 4px; border-top-color: transparent; animation: spin 1s linear infinite; margin: 0 auto 1.5rem; border-color: var(--accent-primary);"></div>
+      
+      <h2 class="resolving-text" id="status-title">AI Agent Investigating Dispute...</h2>
+      <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 2rem;">
+        ResolveAI is auditing transaction logs and matching policies. Please wait.
+      </p>
+
+      <!-- Processing Stages -->
+      <ul class="analysis-list" id="stages-list">
+        <li class="analysis-step" id="stage-received">
+          <div class="analysis-icon"></div>
+          <span>Request Received</span>
+        </li>
+        <li class="analysis-step" id="stage-understanding">
+          <div class="analysis-icon"></div>
+          <span>AI Understanding Dispute (Classification)</span>
+        </li>
+        <li class="analysis-step" id="stage-order">
+          <div class="analysis-icon"></div>
+          <span>Validating Order Existence</span>
+        </li>
+        <li class="analysis-step" id="stage-payment">
+          <div class="analysis-icon"></div>
+          <span>Retrieving Ledger Payments</span>
+        </li>
+        <li class="analysis-step" id="stage-policy">
+          <div class="analysis-icon"></div>
+          <span>Verifying Business Rules & Heuristics</span>
+        </li>
+        <li class="analysis-step" id="stage-execution">
+          <div class="analysis-icon"></div>
+          <span>Executing Gateway Resolution (Refund)</span>
+        </li>
+        <li class="analysis-step" id="stage-notification">
+          <div class="analysis-icon"></div>
+          <span>Sending Email Confirmation</span>
+        </li>
+      </ul>
+
+      <!-- Live Log Output -->
+      <div style="text-align: left; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1.5rem;">
+        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text-secondary);">
+          Live Audit Log Timeline
+        </h4>
+        <div class="timeline" id="live-timeline" style="margin: 0.5rem 0 0; padding-left: 1.5rem;">
+          <!-- Loaded live -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Result Presentation Card (hidden initially) -->
+    <div class="card" id="result-card" style="display: none; padding: 2.5rem; text-align: center; max-width: 600px; margin: 4rem auto;">
+      <!-- Renders result details -->
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ResolveAI. Hackathon Project. Powered by Google Gemini.</p>
+  </footer>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    document.getElementById('cart-count').innerText = state.getCartCount();
+
+    const getDisputeId = () => {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('disputeId');
+    };
+
+    const disputeId = getDisputeId();
+    let pollInterval = null;
+
+    if (!disputeId) {
+      document.getElementById('analysis-box').innerHTML = `
+        <h2 style="color:var(--accent-danger);">Error</h2>
+        <p>Missing Dispute ID parameter.</p>
+        <a href="/pages/orders.html" class="btn btn-secondary" style="margin-top:1.5rem;">Back to Orders</a>
+      `;
+    } else {
+      // Start polling loop
+      pollInterval = setInterval(pollStatus, 900);
+      pollStatus(); // execute initial fetch immediately
+    }
+
+    async function pollStatus() {
+      try {
+        const data = await api.get(`/api/disputes/${disputeId}`);
+        const dispute = data.dispute;
+        const logs = data.logs;
+
+        updateTimelineLogs(logs);
+        updateVisualStages(logs, dispute.status);
+
+        // Check if dispute resolution is complete
+        if (dispute.status !== 'PENDING') {
+          clearInterval(pollInterval);
+          renderFinalResult(dispute);
+        }
+      } catch (err) {
+        console.error('Error polling dispute status', err);
+      }
+    }
+
+    function updateTimelineLogs(logs) {
+      const container = document.getElementById('live-timeline');
+      container.innerHTML = '';
+      
+      if (logs.length === 0) {
+        container.innerHTML = `<div style="font-size:0.85rem; color:var(--text-muted);">Awaiting logging connection...</div>`;
+        return;
+      }
+
+      logs.forEach(log => {
+        const time = new Date(log.timestamp).toLocaleTimeString();
+        const typeClass = log.status.toLowerCase(); // success, failed, info
+        
+        const item = document.createElement('div');
+        item.className = `timeline-item ${typeClass}`;
+        item.style.marginBottom = '1rem';
+        item.innerHTML = `
+          <div class="timeline-time">${time}</div>
+          <div class="timeline-action" style="font-size:0.85rem;">${log.action}</div>
+          <div class="timeline-msg" style="font-size:0.8rem;">${log.message}</div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function updateVisualStages(logs, disputeStatus) {
+      const activeStep = (id) => {
+        const el = document.getElementById(id);
+        el.className = 'analysis-step active';
+      };
+      const doneStep = (id) => {
+        const el = document.getElementById(id);
+        el.className = 'analysis-step done';
+      };
+
+      // Helper to check if a specific action exists in logs
+      const hasLog = (action) => logs.some(l => l.action === action);
+
+      // 1. Request Received
+      if (hasLog('REQUEST_RECEIVED')) {
+        doneStep('stage-received');
+        activeStep('stage-understanding');
+      }
+
+      // 2. AI Understanding
+      if (hasLog('AI_CLASSIFIED')) {
+        doneStep('stage-understanding');
+        activeStep('stage-order');
+      }
+
+      // 3. Order lookup
+      if (hasLog('ORDER_FOUND')) {
+        doneStep('stage-order');
+        activeStep('stage-payment');
+      }
+
+      // 4. Payments lookup
+      if (hasLog('PAYMENTS_RETRIEVED') || hasLog('DUPLICATE_CONFIRMED')) {
+        doneStep('stage-payment');
+        activeStep('stage-policy');
+      }
+
+      // 5. Policy Heuristics
+      if (hasLog('POLICY_CHECKED')) {
+        doneStep('stage-policy');
+        activeStep('stage-execution');
+      }
+
+      // 6. Execution refund
+      if (hasLog('PAYMENT_UPDATED') || hasLog('REFUND_FAILED')) {
+        doneStep('stage-execution');
+        activeStep('stage-notification');
+      }
+
+      // 7. Notification email
+      if (hasLog('EMAIL_SENT')) {
+        doneStep('stage-notification');
+      }
+    }
+
+    function renderFinalResult(dispute) {
+      const loaderBox = document.getElementById('analysis-box');
+      const resultCard = document.getElementById('result-card');
+
+      loaderBox.style.display = 'none';
+      resultCard.style.display = 'block';
+
+      let headerStyle = '';
+      let headerIcon = '';
+      let resultText = '';
+
+      if (dispute.status === 'RESOLVED') {
+        headerIcon = '<span style="font-size:4rem; color:var(--accent-success);">🎉</span>';
+        headerStyle = 'color: var(--accent-success); font-size: 2rem; font-weight:800; margin-top:1rem;';
+        resultText = 'Dispute Automatically Resolved';
+        
+        let detailMessage = `Your refund of <strong>₹${dispute.resolutionDetails.amount}</strong> has been processed successfully.`;
+        if (dispute.category === 'DOUBLE_CHARGE') {
+          detailMessage = `Your duplicate payment of <strong>₹${dispute.resolutionDetails.amount}</strong> has been refunded.`;
+        } else if (dispute.category === 'DAMAGED_PRODUCT') {
+          detailMessage = `Your claim has been verified and a refund of <strong>₹${dispute.resolutionDetails.amount}</strong> has been processed for the damaged item.`;
+        } else if (dispute.category === 'REFUND_REQUEST') {
+          detailMessage = `Your return request has been approved and a refund of <strong>₹${dispute.resolutionDetails.amount}</strong> has been processed.`;
+        } else if (dispute.category === 'PAYMENT_DISPUTE') {
+          detailMessage = `Your payment verification claim has been resolved and a refund of <strong>₹${dispute.resolutionDetails.amount}</strong> has been processed.`;
+        }
+
+        resultCard.innerHTML = `
+          ${headerIcon}
+          <h2 style="${headerStyle}">${resultText}</h2>
+          <p style="color:var(--text-secondary); font-size:1.05rem; margin: 1rem 0 2rem;">
+            ${detailMessage}
+          </p>
+          <div class="card" style="text-align:left; background-color:var(--bg-tertiary); margin-bottom:2rem; font-size:0.9rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+              <span style="color:var(--text-secondary);">Resolution Action:</span>
+              <strong>${dispute.resolutionDetails.action}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+              <span style="color:var(--text-secondary);">Refund Transaction:</span>
+              <code>${dispute.resolutionDetails.refundedPaymentId}</code>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:var(--text-secondary);">Gateway Message:</span>
+              <span style="font-style:italic;">"${dispute.resolutionDetails.message}"</span>
+            </div>
+          </div>
+          <a href="/pages/orders.html" class="btn btn-primary" style="width:100%;">Return to My Orders</a>
+        `;
+      } else if (dispute.status === 'HUMAN_REVIEW_REQUIRED' || dispute.status === 'MORE_INFO_REQUIRED') {
+        headerIcon = '<span style="font-size:4rem; color:var(--accent-warning);">📋</span>';
+        headerStyle = 'color: var(--accent-warning); font-size: 2rem; font-weight:800; margin-top:1rem;';
+        resultText = dispute.status === 'MORE_INFO_REQUIRED' ? 'More Information Required' : 'Human Review Required';
+        
+        resultCard.innerHTML = `
+          ${headerIcon}
+          <h2 style="${headerStyle}">${resultText}</h2>
+          <p style="color:var(--text-secondary); font-size:1rem; margin: 1rem 0 2rem;">
+            ${dispute.resolutionDetails.message || 'This dispute has been escalated to our customer support team for manual verification. A notification has been sent.'}
+          </p>
+          <a href="/pages/orders.html" class="btn btn-secondary" style="width:100%;">Return to My Orders</a>
+        `;
+      } else {
+        headerIcon = '<span style="font-size:4rem; color:var(--accent-danger);">❌</span>';
+        headerStyle = 'color: var(--accent-danger); font-size: 2rem; font-weight:800; margin-top:1rem;';
+        resultText = 'Dispute Request Declined';
+
+        resultCard.innerHTML = `
+          ${headerIcon}
+          <h2 style="${headerStyle}">${resultText}</h2>
+          <p style="color:var(--text-secondary); font-size:1rem; margin: 1rem 0 2rem;">
+            ${dispute.resolutionDetails.message}
+          </p>
+          <a href="/pages/orders.html" class="btn btn-secondary" style="width:100%;">Return to My Orders</a>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

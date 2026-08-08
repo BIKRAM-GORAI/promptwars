@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Details - ResolveAI Store</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        RESOLVE<span>AI</span>
+        <span class="logo-sub">Store</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Shop</a></li>
+        <li><a href="/pages/orders.html" class="nav-link active">My Orders</a></li>
+        <li>
+          <a href="/pages/cart.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; border-radius: 8px;">
+            Cart (<span id="cart-count">0</span>)
+          </a>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h1 style="font-size: 2rem; font-weight: 800;">Order Details</h1>
+      <a href="/pages/orders.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; border-radius: 8px;">
+        &larr; Back to History
+      </a>
+    </div>
+
+    <div class="split-layout" id="order-details-container">
+      <div style="text-align: center; grid-column: 1/-1; padding: 4rem; color: var(--text-secondary);">
+        Loading order details...
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ResolveAI. Hackathon Project. Powered by Google Gemini.</p>
+  </footer>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    document.getElementById('cart-count').innerText = state.getCartCount();
+
+    const getOrderId = () => {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    };
+
+    const loadOrderDetails = async () => {
+      const orderId = getOrderId();
+      const container = document.getElementById('order-details-container');
+
+      if (!orderId) {
+        container.innerHTML = `<div class="card" style="color:var(--accent-danger); text-align:center; grid-column:1/-1;">Missing Order ID parameter in URL query.</div>`;
+        return;
+      }
+
+      try {
+        const order = await api.get(`/api/orders/${orderId}`);
+        
+        // Fetch products catalog and disputes history in parallel
+        const [products, disputes] = await Promise.all([
+          api.get('/api/products'),
+          api.get('/api/disputes')
+        ]);
+
+        const productMap = new Map(products.map(p => [p._id, p.image]));
+
+        let itemsHtml = '';
+        order.items.forEach(item => {
+          const imgUrl = productMap.get(item.productId);
+          let imgMarkup = '';
+          if (imgUrl && (imgUrl.startsWith('http') || imgUrl.startsWith('/') || imgUrl.includes('.'))) {
+            imgMarkup = `<img src="${imgUrl}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 0.75rem;" onerror="this.onerror=null; this.outerHTML='<span style=&quot;font-size:1.8rem; margin-right:0.75rem;&quot;>📦</span>';">`;
+          } else {
+            imgMarkup = `<span style="font-size: 1.8rem; margin-right: 0.75rem;">${imgUrl || '📦'}</span>`;
+          }
+
+          itemsHtml += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom: 1px solid var(--border-color);">
+              <div style="display:flex; align-items:center;">
+                ${imgMarkup}
+                <div>
+                  <strong style="color:var(--text-primary);">${item.name}</strong>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Qty: ${item.quantity} &times; ₹${item.price.toFixed(2)}</div>
+                </div>
+              </div>
+              <strong style="color:var(--text-primary);">₹${(item.price * item.quantity).toFixed(2)}</strong>
+            </div>
+          `;
+        });
+
+        // Filter disputes related to this specific order
+        const orderDisputes = disputes.filter(d => {
+          const dOrderId = d.orderId && typeof d.orderId === 'object' ? d.orderId._id : d.orderId;
+          return dOrderId && dOrderId.toString() === order._id.toString();
+        });
+
+        // Identify if there's any active or resolved claim
+        const activeOrResolved = orderDisputes.find(d => ['PENDING', 'RESOLVED', 'HUMAN_REVIEW_REQUIRED', 'MORE_INFO_REQUIRED'].includes(d.status));
+
+        let helpCardHtml = '';
+        if (activeOrResolved) {
+          let statusLabel = 'Dispute Under Review';
+          let statusDesc = 'Our AI Resolver or support team is currently reviewing your claim.';
+          let statusBadgeClass = 'badge-pending';
+          
+          if (activeOrResolved.status === 'RESOLVED') {
+            statusLabel = 'Refund Resolved';
+            statusDesc = `A refund of ₹${activeOrResolved.resolutionDetails.amount.toFixed(2)} has been successfully resolved and processed.`;
+            statusBadgeClass = 'badge-resolved';
+          } else if (activeOrResolved.status === 'HUMAN_REVIEW_REQUIRED') {
+            statusLabel = 'Human Review';
+            statusDesc = 'This claim has been escalated for manual human verification and log checks.';
+            statusBadgeClass = 'badge-human_review_required';
+          } else if (activeOrResolved.status === 'MORE_INFO_REQUIRED') {
+            statusLabel = 'Info Required';
+            statusDesc = activeOrResolved.resolutionDetails.message || 'Please submit the requested files to proceed.';
+            statusBadgeClass = 'badge-more_info_required';
+          }
+
+          let productDetail = '';
+          if (activeOrResolved.productId) {
+            const pId = activeOrResolved.productId._id || activeOrResolved.productId;
+            const dispProd = products.find(p => p._id === pId);
+            if (dispProd) {
+              productDetail = `<div style="font-size:0.8rem; margin:0.5rem 0; color:var(--text-secondary);">Disputed Item: <strong>${dispProd.name}</strong></div>`;
+            }
+          }
+
+          helpCardHtml = `
+            <div class="card" style="border-color:var(--border-color);">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                <h3 class="card-title" style="font-size:1.1rem; margin:0;">Dispute Status</h3>
+                <span class="badge ${statusBadgeClass}">${statusLabel}</span>
+              </div>
+              <p class="card-desc" style="font-size:0.85rem; margin-bottom:1rem; line-height:1.4;">
+                ${statusDesc}
+              </p>
+              ${productDetail}
+              <a href="/pages/analyzing.html?disputeId=${activeOrResolved._id}" class="btn btn-secondary" style="width:100%; font-size:0.8rem; display:flex; align-items:center; justify-content:center;">
+                🔍 View Analysis Timeline
+              </a>
+            </div>
+          `;
+        } else {
+          helpCardHtml = `
+            <div class="card" style="background-color:rgba(190, 18, 60, 0.02); border-color:rgba(190, 18, 60, 0.15);">
+              <h3 class="card-title" style="font-size:1.1rem; color:var(--accent-danger);">Need help with this order?</h3>
+              <p class="card-desc" style="font-size:0.85rem; margin-bottom:1.25rem;">
+                If you were charged twice, didn't receive your refund, or if the product was received damaged, submit a claim. Our AI system will inspect your payment records and process it autonomously.
+              </p>
+              <a href="/pages/dispute.html?orderId=${order._id}&paymentId=${order.paymentId || ''}" class="btn btn-danger" style="width:100%;">
+                ⚠️ Report a Problem / File Dispute
+              </a>
+            </div>
+          `;
+        }
+
+        const orderDate = new Date(order.orderDate || order.createdAt).toLocaleString();
+        const deliveryDate = order.deliveryDate ? new Date(order.deliveryDate).toLocaleString() : 'N/A';
+
+        container.innerHTML = `
+          <div class="card" style="display:flex; flex-direction:column; gap:1.25rem;">
+            <div>
+              <span class="badge badge-${order.status.toLowerCase()}" style="margin-bottom:0.5rem;">${order.status}</span>
+              <h3 class="card-title">Items in Order</h3>
+            </div>
+            
+            <div style="margin-top:0.5rem;">
+              ${itemsHtml}
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:800; margin-top:0.5rem; padding-top:0.5rem;">
+              <span>Total Paid</span>
+              <span>₹${order.totalAmount.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:1.5rem;">
+            <div class="card">
+              <h3 class="card-title" style="font-size:1.1rem; margin-bottom:0.75rem;">Transaction Information</h3>
+              
+              <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:0.9rem;">
+                <div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border-color); padding-bottom:0.5rem;">
+                  <span style="color:var(--text-secondary);">Order ID:</span>
+                  <code>${order._id}</code>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Payment Transaction:</span>
+                  <code style="font-weight:600;">${order.paymentId || 'Pending/No payment'}</code>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Order Date:</span>
+                  <span>${orderDate}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span style="color:var(--text-secondary);">Delivery Date:</span>
+                  <span>${deliveryDate}</span>
+                </div>
+              </div>
+            </div>
+
+            ${helpCardHtml}
+          </div>
+        `;
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div class="card" style="color:var(--accent-danger); text-align:center; grid-column:1/-1;">Failed to load order details: ${err.message}</div>`;
+      }
+    };
+
+    loadOrderDetails();
+  </script>
+</body>
+</html>

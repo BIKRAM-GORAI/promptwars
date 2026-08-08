@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - ResolveAI Store</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <!-- Razorpay Checkout Script -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        RESOLVE<span>AI</span>
+        <span class="logo-sub">Store</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Shop</a></li>
+        <li><a href="/pages/orders.html" class="nav-link">My Orders</a></li>
+        <li><a href="/pages/admin/dashboard.html" class="nav-link">Admin Portal</a></li>
+        <li>
+          <a href="/pages/cart.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; border-radius: 8px;">
+            Cart (<span id="cart-count">0</span>)
+          </a>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 1.5rem;">Checkout</h1>
+
+    <div class="cart-split" id="checkout-container">
+      <div class="card">
+        <h3 class="card-title">Billing & Shipping Details</h3>
+        <p class="card-desc">Simulated customer details (seeded default John Doe).</p>
+        
+        <form id="checkout-form">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-input" value="John Doe" disabled>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-input" value="john@example.com" disabled>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Shipping Address</label>
+            <textarea class="form-textarea" required disabled>123 High Street, Tech Park, Bangalore, KA, 560001</textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Select Payment Method</label>
+            <select class="form-select" id="payment-method">
+              <option value="RAZORPAY">Razorpay Secure Checkout (Cards, UPI, Wallet)</option>
+              <option value="MOCK_CARD">Credit/Debit Card (Mock Mode)</option>
+              <option value="MOCK_UPI">UPI / Net Banking (Mock Mode)</option>
+            </select>
+          </div>
+        </form>
+      </div>
+
+      <div class="card cart-summary" id="checkout-totals">
+        <!-- Filled dynamically -->
+        Loading order details...
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ResolveAI. Hackathon Project. Powered by Google Gemini.</p>
+  </footer>
+
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    document.getElementById('cart-count').innerText = state.getCartCount();
+
+    const renderTotals = () => {
+      const container = document.getElementById('checkout-totals');
+      const cart = state.getCart();
+      const total = state.getCartTotal();
+
+      if (cart.length === 0) {
+        window.location.href = '/pages/cart.html';
+        return;
+      }
+
+      let itemsSummaryHtml = '';
+      cart.forEach(item => {
+        itemsSummaryHtml += `
+          <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+            <span>${item.name} (x${item.quantity})</span>
+            <span>₹${(item.price * item.quantity).toFixed(2)}</span>
+          </div>
+        `;
+      });
+
+      container.innerHTML = `
+        <h3 class="card-title">Order Total</h3>
+        <p class="card-desc">Review details before checking out.</p>
+        
+        <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1rem;">
+          ${itemsSummaryHtml}
+        </div>
+
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span>₹${total.toFixed(2)}</span>
+        </div>
+        <div class="summary-row" style="color: var(--accent-success);">
+          <span>Shipping</span>
+          <span>FREE</span>
+        </div>
+        <div class="summary-row summary-total">
+          <span>Total</span>
+          <span>₹${total.toFixed(2)}</span>
+        </div>
+
+        <button type="button" class="btn btn-primary" id="pay-btn" style="width: 100%; margin-top: 1.5rem;">
+          Confirm Order & Pay ₹${total.toFixed(2)}
+        </button>
+      `;
+
+      document.getElementById('pay-btn').addEventListener('click', handlePayment);
+    };
+
+    const handlePayment = async () => {
+      const payBtn = document.getElementById('pay-btn');
+      payBtn.disabled = true;
+      payBtn.innerText = 'Processing Order...';
+
+      const cart = state.getCart();
+      const method = document.getElementById('payment-method').value;
+
+      try {
+        // 1. Create order in PENDING status
+        const items = cart.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity
+        }));
+
+        console.log('[CHECKOUT] Creating order in backend...');
+        const order = await api.post('/api/orders', { items });
+
+        if (method === 'RAZORPAY') {
+          // 2. Create Razorpay order in backend
+          payBtn.innerText = 'Initializing Razorpay...';
+          console.log(`[CHECKOUT] Creating Razorpay order for local order ID: ${order._id}...`);
+          
+          const rzpOrder = await api.post('/api/payments/razorpay/order', {
+            orderId: order._id,
+            amount: order.totalAmount
+          });
+
+          // 3. Open Razorpay Checkout modal
+          const options = {
+            key: "rzp_test_TNAbrqeGTrHVaW",
+            amount: rzpOrder.amount,
+            currency: rzpOrder.currency,
+            name: "ResolveAI Store",
+            description: "Checkout Payment Transaction",
+            order_id: rzpOrder.id,
+            handler: async function (response) {
+              payBtn.innerText = 'Verifying Transaction...';
+              try {
+                const verification = await api.post('/api/payments/razorpay/verify', {
+                  orderId: order._id,
+                  amount: order.totalAmount,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpaySignature: response.razorpay_signature
+                });
+
+                if (verification.success) {
+                  console.log('[CHECKOUT] Razorpay payment verified. ID:', response.razorpay_payment_id);
+                  state.clearCart();
+                  alert('Payment successful and verified via Razorpay!');
+                  window.location.href = '/pages/orders.html';
+                }
+              } catch (verifyError) {
+                console.error(verifyError);
+                alert(`Payment verification failed: ${verifyError.message}`);
+                payBtn.disabled = false;
+                payBtn.innerText = 'Confirm Order & Pay';
+              }
+            },
+            prefill: {
+              name: "Customer User",
+              email: "customer@example.com"
+            },
+            theme: {
+              color: "#6366f1"
+            },
+            modal: {
+              ondismiss: function () {
+                console.log('[CHECKOUT] Razorpay payment dismissed');
+                payBtn.disabled = false;
+                payBtn.innerText = 'Confirm Order & Pay';
+              }
+            }
+          };
+
+          const rzp = new Razorpay(options);
+          rzp.open();
+        } else {
+          // Process standard mock payment
+          payBtn.innerText = 'Authorizing Payment...';
+          console.log(`[CHECKOUT] Authorizing mock payment for order ${order._id}...`);
+          
+          const payment = await api.post('/api/payments/mock', {
+            orderId: order._id,
+            amount: order.totalAmount,
+            paymentMethod: method
+          });
+
+          console.log('[CHECKOUT] Order paid successfully! Transaction:', payment.transactionId);
+          state.clearCart();
+          alert('Order placed and paid successfully (Mock Mode)!');
+          window.location.href = '/pages/orders.html';
+        }
+      } catch (err) {
+        console.error(err);
+        alert(`Checkout failed: ${err.message}`);
+        payBtn.disabled = false;
+        payBtn.innerText = 'Confirm Order & Pay';
+      }
+    };
+
+    renderTotals();
+  </script>
+</body>
+</html>
