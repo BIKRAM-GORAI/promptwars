@@ -76,7 +76,7 @@ app.use('/api/admin', adminRouter);
 // Fallback: serve index.html for undefined routes to support client-side routing if any
 app.get('*', (req, res, next) => {
   // If requesting API, proceed to notFound/errorHandler instead of HTML
-  if (req.path.startsWith('/api/') || req.path === '/health') {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
     return next();
   }
   res.sendFile(path.join(__dirname, '../public/index.html'));
