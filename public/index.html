@@ -3,12 +3,113 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ResolveAI - Autonomous Payment Dispute Resolution Platform</title>
+  <title>ResolveAI - Autonomous Dispute Resolution Platform</title>
   <meta name="description" content="An autonomous customer dispute resolution system powered by Google Gemini and integrated with Razorpay.">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="/css/global.css">
   <link rel="stylesheet" href="/css/components.css">
   <link rel="stylesheet" href="/css/pages.css">
+  <style>
+    /* Breathtaking premium Hero Styles */
+    .hero-section {
+      background: radial-gradient(circle at top right, rgba(30, 27, 75, 0.4), transparent), 
+                  radial-gradient(circle at bottom left, rgba(15, 23, 42, 0.05), transparent),
+                  var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 4rem 2rem;
+      text-align: center;
+      margin-bottom: 3rem;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(15, 23, 42, 0.05);
+      border: 1px solid var(--border-color);
+      padding: 0.35rem 1rem;
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      color: var(--text-secondary);
+    }
+    .hero-title {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.05em;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+    .hero-title span {
+      background: linear-gradient(135deg, #0284c7, #4f46e5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 650px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.5;
+    }
+    /* Portal card designs */
+    .portal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 3rem;
+    }
+    .portal-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 2.25rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--shadow-md);
+      position: relative;
+    }
+    .portal-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: rgba(79, 70, 229, 0.3);
+    }
+    .portal-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .portal-icon {
+      font-size: 2rem;
+      background: var(--bg-tertiary);
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+    }
+    .portal-title {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .portal-desc {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -24,102 +125,112 @@
     </div>
   </header>
 
-  <main style="max-width: 850px; margin: 3rem auto; padding: 0 1rem;">
-    <div style="text-align: center; margin-bottom: 3rem;">
-      <span style="font-size: 3rem;">🤖</span>
-      <h1 style="font-size: 2.5rem; font-weight: 800; letter-spacing: -0.04em; margin-top: 0.5rem; color: var(--text-primary);">
-        ResolveAI Capabilities Landing Page
+  <main style="max-width: 900px; margin: 3rem auto; padding: 0 1rem;">
+    
+    <!-- Hero Banner Section -->
+    <div class="hero-section">
+      <div class="hero-badge">🤖 Gemini Powered Fintech</div>
+      <h1 class="hero-title">
+        Resolve customer payment disputes <span>instantly</span>.
       </h1>
-      <p style="color: var(--text-secondary); font-size: 1.1rem; margin-top: 0.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-        An autonomous dispute resolution system powered by Google Gemini and integrated with Razorpay. Below is a comprehensive list of what you can test.
+      <p class="hero-subtitle">
+        ResolveAI is an autonomous dispute agent combining Google Gemini's multimodal reasoning with secure payment operations to verify and resolve refund disputes automatically.
       </p>
+
+      <!-- Dynamic Shortcut to Scenario Guides -->
+      <a href="#test-scenarios" style="font-size: 0.9rem; font-weight: 700; color: #4f46e5; text-decoration: underline;">
+        👇 View Walkthrough Testing Scenarios Below
+      </a>
     </div>
 
-    <!-- Capabilities Cards Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 3rem;">
-      <div class="card" style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <span style="font-size: 1.5rem;">💳</span>
-        <h3 class="card-title" style="margin-top: 0.5rem;">Razorpay Integration</h3>
-        <p class="card-desc" style="font-size: 0.85rem; line-height: 1.4;">
-          Enables secure payments and auto-refund payouts. Integrates seamlessly with Razorpay Checkout overlays, local HMAC-sha256 signature checks, and API refunds.
-        </p>
+    <!-- Entrance Portals Grid -->
+    <h2 style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1.5rem; color: var(--text-primary);">
+      Select Your Portal
+    </h2>
+    
+    <div class="portal-grid">
+      <!-- Portal 1: Customer Storefront -->
+      <div class="portal-card">
+        <div>
+          <div class="portal-card-header">
+            <div class="portal-icon">🛍️</div>
+            <h3 class="portal-title">Customer Storefront</h3>
+          </div>
+          <p class="portal-desc">
+            Sign in as a customer, browse the product catalog, place orders, complete checkout, and submit dispute claims or proportional refunds.
+          </p>
+        </div>
+        <a href="/pages/store.html" class="btn btn-primary" style="width: 100%; text-align: center; text-decoration: none; padding: 0.75rem;">
+          🛍️ Enter Customer Portal
+        </a>
       </div>
 
-      <div class="card" style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <span style="font-size: 1.5rem;">🔍</span>
-        <h3 class="card-title" style="margin-top: 0.5rem;">Gemini Visual Verification</h3>
-        <p class="card-desc" style="font-size: 0.85rem; line-height: 1.4;">
-          Validates customer uploaded evidence photos. Prevents refund abuse by checking if the image shows the correct damaged item using zero-shot multimodal intelligence.
-        </p>
-      </div>
-
-      <div class="card" style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <span style="font-size: 1.5rem;">🍰</span>
-        <h3 class="card-title" style="margin-top: 0.5rem;">Granular Line-Item Claims</h3>
-        <p class="card-desc" style="font-size: 0.85rem; line-height: 1.4;">
-          Allows customer claims to target specific products in bulk orders. Refund balances and auto-refund policies evaluate proportions of the single item, not the entire order.
-        </p>
-      </div>
-
-      <div class="card" style="display: flex; flex-direction: column; gap: 0.5rem;">
-        <span style="font-size: 1.5rem;">🛡️</span>
-        <h3 class="card-title" style="margin-top: 0.5rem;">API & Spam Security</h3>
-        <p class="card-desc" style="font-size: 0.85rem; line-height: 1.4;">
-          Enforces specialized API rate-limiting rules, CORS validations, and strict Content Security Policies (CSP) to defend against bot spam, clickjacking, and carding.
-        </p>
+      <!-- Portal 2: Admin Dashboard -->
+      <div class="portal-card">
+        <div>
+          <div class="portal-card-header">
+            <div class="portal-icon">🔐</div>
+            <h3 class="portal-title">Admin Dashboard</h3>
+          </div>
+          <p class="portal-desc">
+            Monitor real-time disputes, inspect Gemini's multimodal visual audit reasons, verify automation log timelines, and process manual reviews.
+          </p>
+        </div>
+        <a href="/pages/admin/dashboard.html" class="btn btn-secondary" style="width: 100%; text-align: center; text-decoration: none; padding: 0.75rem;">
+          🔐 Access Admin Panel
+        </a>
       </div>
     </div>
 
     <!-- Scenarios & How to test -->
-    <h2 style="font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
-      Active Test Scenarios
+    <h2 id="test-scenarios" style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; color: var(--text-primary);">
+      Testing Capability Scenarios
     </h2>
 
     <div style="display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 3rem;">
       
       <!-- Scenario 1 -->
       <div class="card" style="border-left: 4px solid var(--accent-primary);">
-        <h4 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <h4 style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
           <span style="color: var(--accent-success);">✔</span> Scenario 1: Double Charge Claim (Instant Payout)
         </h4>
-        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
+        <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
           Test the automated billing audit. The AI logs double charges, checks database payment ledgers, and processes an immediate refund.
         </p>
         <div style="background-color: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem;">
           <strong>Steps to run:</strong>
           <ol style="margin-top: 0.35rem; padding-left: 1.25rem; line-height: 1.5;">
-            <li>View details on any order in your <strong>My Orders</strong> history.</li>
-            <li>Click <strong>Report Double Charge or Billing Issue</strong> at the bottom.</li>
-            <li>Type: <code>"I was charged twice for this order"</code> and submit.</li>
-            <li>Watch the progress steps resolve and issue the refund transaction.</li>
+            <li>Login as customer, browse catalog, checkout, and run <code>node create-double-payment.js</code> to simulate a duplicate charge.</li>
+            <li>Go to <strong>My Orders</strong>, open details, and click <strong>Report Double Charge or Billing Issue</strong>.</li>
+            <li>Submit: <code>"I was charged twice"</code> and watch the AI process the refund instantly.</li>
           </ol>
         </div>
       </div>
 
       <!-- Scenario 2 -->
       <div class="card" style="border-left: 4px solid var(--accent-primary);">
-        <h4 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <h4 style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
           <span style="color: var(--accent-success);">✔</span> Scenario 2: Proportional Refund (Gemini Photo Verification)
         </h4>
-        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
+        <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
           Test Gemini's multimodal cross-check. Uploading a damaged keyboard photo on a wireless mouse refund request fails validation, routing the case to manual human review.
         </p>
         <div style="background-color: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem;">
           <strong>Steps to run:</strong>
           <ol style="margin-top: 0.35rem; padding-left: 1.25rem; line-height: 1.5;">
-            <li>Select an order with multiple items and click <strong>Request Refund</strong> next to a specific product.</li>
+            <li>Click <strong>Request Refund</strong> next to a specific product in your Order details view.</li>
             <li>Upload a picture containing a completely different item.</li>
-            <li>Submit the form. Gemini detects the item mismatch and routes the case to <strong>Human Review</strong> with the specific reasoning visible in the Admin Panel.</li>
+            <li>Submit. Gemini detects the item mismatch and routes the case to <strong>Human Review</strong> with visual analysis reasons visible in the Admin Panel.</li>
           </ol>
         </div>
       </div>
 
       <!-- Scenario 3 -->
       <div class="card" style="border-left: 4px solid var(--accent-primary);">
-        <h4 style="font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+        <h4 style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
           <span style="color: var(--accent-success);">✔</span> Scenario 3: Return Window Exceeded Rejection
         </h4>
-        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
+        <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
           Test policy boundaries. Claims filed outside the return window configured in your environment are immediately declined.
         </p>
         <div style="background-color: var(--bg-tertiary); padding: 0.75rem; border-radius: var(--radius-sm); font-size: 0.85rem;">
@@ -131,14 +242,6 @@
         </div>
       </div>
 
-    </div>
-
-    <!-- Navigation Shortcuts -->
-    <div style="display: flex; gap: 1.5rem; justify-content: center; margin-top: 2rem;">
-      <a href="/pages/store.html" class="btn btn-primary" style="padding: 0.75rem 2rem; font-weight: 600; text-decoration: none;">Go to Storefront</a>
-      <a href="/pages/admin/dashboard.html" class="btn btn-secondary" style="padding: 0.75rem 2rem; display: flex; align-items: center; gap: 0.5rem; text-decoration: none;">
-        🔐 Admin Panel Access
-      </a>
     </div>
 
   </main>
