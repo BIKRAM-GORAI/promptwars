@@ -13,7 +13,7 @@ graph TD
     A[Customer submits dispute/image] --> B[Gemini AI Classifier]
     B -->|Category & Confidence| C[ResolveAI Policy Engine]
     C -->|Check window, limits, fraud| D{Is claim eligible?}
-    D -->|YES: Auto-Refund Approved| E[Mock Payment Service]
+    D -->|YES: Auto-Refund Approved| E[Razorpay / Mock Gateway]
     D -->|NO: Rejected/Out of Window| F[Dispute Status: REJECTED]
     D -->|UNCERTAIN: Escalate| G[Dispute Status: HUMAN_REVIEW]
     E -->|Execute gateway refund| H[Update Mongoose DB & Send Email]
@@ -24,14 +24,17 @@ graph TD
 
 ---
 
-## Features
+## Key Features
 
 - **Gemini AI Classification**: Analyzes complaint description texts and classifies them into structured categories with confidence metrics.
 - **Multimodal AI Image Analysis**: Evaluates photographic evidence for damaged product claims using Gemini's visual analysis.
-- **Centralized Policy Engine**: Assesses disputes against return window timelines (7 days), maximum auto-refund limits, and duplicate payment counts.
-- **Modular Payment Abstraction**: Clear service interfaces enabling mock test modes in Phase 1, easily swappable with Razorpay APIs in future iterations.
-- **Dynamic Audit Timelines**: AutomationLog models capture and expose every decision step live to customer and admin dashboards.
-- **Nodemailer SMTP Fallback**: Sends email alerts dynamically, printing logs to stdout if credentials are not configured.
+- **Zero-Shot Fraud Verification**: Gemini cross-references uploaded photos with the exact expected item description from order records to catch mismatch fraud (e.g. keyboard photo uploaded for mouse claims).
+- **Centralized Policy Engine**: Assesses disputes against return window timelines (configurable in `.env`), maximum auto-refund limits, and duplicate payment counts.
+- **Individual Line-Item Claims**: Customers can file disputes for specific items in a bulk order. Auto-refund eligibility and refund payments are calculated proportionally for that item.
+- **Dynamic Dispute Status Dashboard**: Replaces general file-complaint buttons with live status tracking boards when claims are active.
+- **Razorpay Gateway Integration**: Seamless checkout and instant gateway refunds for verified claims.
+- **Multi-Tier Rate Limiting & Helmet Headers**: Enforces strict endpoint security, content security policies (CSP), and clickjacking/MIME sniffing protections.
+- **Google Firebase Authentication**: Secure sign-in and sign-up flows for customers.
 
 ---
 
@@ -42,7 +45,8 @@ graph TD
 - **Database**: MongoDB & Mongoose.
 - **AI Integration**: Official Google Generative AI SDK (`@google/generative-ai`).
 - **File Uploads & Storage**: Multer memory buffer handling, unified local disk storage or Cloudinary integrations.
-- **Email Service**: Nodemailer.
+- **Payment Gateway**: Razorpay APIs.
+- **Email Service**: Nodemailer SMTP fallback.
 - **Deployment**: Render-compatible web services profile.
 
 ---
@@ -99,11 +103,19 @@ ADMIN_EMAIL=admin@resolveai.com
 ADMIN_PASSWORD=adminpassword123
 
 # SMTP Email (Optional, mock logger fallback active if empty)
-SMTP_HOST=
+SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
 EMAIL_FROM=noreply@resolveai.com
+
+# Razorpay Integration
+RAZORPAY_KEY_ID=rzp_test_xxxxxx
+RAZORPAY_KEY_SECRET=xxxxxx
+
+# Policy Configuration
+RETURN_WINDOW_DAYS=7
+AUTO_REFUND_LIMIT=10000
 ```
 
 ### 3. Database Seeding
@@ -124,22 +136,13 @@ Open `http://localhost:5000` on your browser to access the storefront.
 ## Core Demo Workflows
 
 ### Scenario 1: Double Charge (Primary Auto-Refund Demo)
-1. Navigate to "My Orders" on the header menu.
-2. Select **View Order Details** on the top order (seeded duplicate payments mock).
-3. Scroll down and click **Report a Problem / File Dispute**.
-4. Type: `"I was charged twice for this order."` and click **VERIFY & RESOLVE**.
-5. The analyzing progress screen polls the logs, processes the refund, and displays the success screen showing **₹1499 refunded**.
+1. Go to "My Orders" and click **Details** on the top order.
+2. Under general payment issues, click **Report Double Charge or Billing Issue**.
+3. Submit: `"I was charged twice for this order."`
+4. The timeline logs poll, approve the duplicate claim, execute the refund, and show success.
 
-### Scenario 2: Expired Refund Claim (Rejection Policy Demo)
-1. Go to "My Orders" and click details on the webcam purchase (ordered 19 days ago).
-2. Open dispute form and submit: `"I would like to request a refund for this webcam."`.
-3. The resolving agent runs the return window policy check and rejects the claim automatically because it exceeds the 7-day limit.
-
----
-
-## Render Deployment
-
-To deploy ResolveAI directly on Render:
-1. Connect your repository to Render.
-2. Use the `render.yaml` blueprint.
-3. Supply the environment variables `MONGODB_URI` and `GEMINI_API_KEY` in the Render dashboard settings.
+### Scenario 2: Proportional Refund Claim (Damaged Item)
+1. Go to "My Orders" and open the bulk order details.
+2. Next to your item, click **Request Refund**.
+3. Upload a photo showing physical damage of the correct item and submit.
+4. Gemini verifies the image contents against the expected product, checks return policies, and executes a proportional partial refund for that item.

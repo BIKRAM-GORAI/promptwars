@@ -44,12 +44,32 @@ app.use(cors());
 // General rate limiter for APIs
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 200, // Limit each IP to 200 requests per windowMs
   message: { message: 'Too many requests from this IP, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false
 });
 app.use('/api/', apiLimiter);
+
+// Specialized stricter rate limiter for payment transactions (prevents carding attacks)
+const paymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // Limit to 15 checkout creations per 15 minutes
+  message: { message: 'Too many payment creation attempts from this IP. Please wait before retrying.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/payments', paymentLimiter);
+
+// Specialized stricter rate limiter for filing disputes (prevents spam and AI exploitation)
+const disputeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // Limit to 10 claims filed per hour
+  message: { message: 'Too many dispute claims filed from this IP. Please try again after an hour.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/disputes', disputeLimiter);
 
 // Express JSON and urlencoded body parsers
 app.use(express.json());
