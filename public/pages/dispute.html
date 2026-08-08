@@ -50,10 +50,11 @@
 
         <div class="form-group" id="product-select-group" style="display: none;">
           <label class="form-label" for="product-select">Select Disputed Product</label>
-          <select class="form-select" id="product-select" name="productId">
+          <select class="form-select" id="product-select">
             <option value="ALL">All Items / Entire Order</option>
             <!-- Filled dynamically based on selected order -->
           </select>
+          <input type="hidden" id="hidden-product-id" name="productId">
         </div>
 
         <div class="form-group">
@@ -107,6 +108,7 @@
       const productSelect = document.getElementById('product-select');
       const submitBtn = document.getElementById('submit-btn');
       const warningDiv = document.getElementById('dispute-warning');
+      const hiddenInput = document.getElementById('hidden-product-id');
 
       const orderId = orderSelect.value;
       if (!orderId) {
@@ -118,6 +120,10 @@
 
       const pId = productSelect.value;
       const targetProductId = (pId && pId !== 'ALL' && pId !== '') ? pId : null;
+
+      if (hiddenInput) {
+        hiddenInput.value = targetProductId || 'ALL';
+      }
 
       // Find if there is an active/resolved dispute matching this order & product combination
       const duplicate = userDisputes.find(d => {
@@ -168,10 +174,15 @@
       const orderSelect = document.getElementById('order-select');
       const productSelectGroup = document.getElementById('product-select-group');
       const productSelect = document.getElementById('product-select');
+      const hiddenInput = document.getElementById('hidden-product-id');
+      
+      const params = new URLSearchParams(window.location.search);
+      const urlProductId = params.get('productId');
       
       const selectedId = orderSelect.value;
       if (!selectedId) {
         productSelectGroup.style.display = 'none';
+        if (hiddenInput) hiddenInput.value = '';
         checkExistingDispute();
         return;
       }
@@ -183,12 +194,26 @@
           const opt = document.createElement('option');
           opt.value = item.productId;
           opt.innerText = `${item.name} (₹${item.price} - Qty: ${item.quantity})`;
+          if (urlProductId && urlProductId === item.productId) {
+            opt.selected = true;
+          }
           productSelect.appendChild(opt);
         });
         productSelectGroup.style.display = 'block';
+
+        if (urlProductId) {
+          productSelect.disabled = true;
+          orderSelect.disabled = true;
+        }
       } else {
         productSelectGroup.style.display = 'none';
       }
+
+      if (hiddenInput) {
+        const pVal = productSelect.value;
+        hiddenInput.value = (pVal && pVal !== 'ALL') ? pVal : '';
+      }
+
       checkExistingDispute();
     };
 
@@ -240,7 +265,21 @@
       submitBtn.disabled = true;
       submitBtn.innerText = 'Submitting Claim...';
 
+      const orderSelect = document.getElementById('order-select');
+      const productSelect = document.getElementById('product-select');
+      
+      const orderWasDisabled = orderSelect.disabled;
+      const productWasDisabled = productSelect.disabled;
+      
+      // Temporarily re-enable to ensure FormData serializes their selected values
+      orderSelect.disabled = false;
+      productSelect.disabled = false;
+
       const formData = new FormData(e.target);
+
+      // Restore original disabled state
+      orderSelect.disabled = orderWasDisabled;
+      productSelect.disabled = productWasDisabled;
 
       try {
         console.log('[DISPUTE] Submitting dispute form to API...');

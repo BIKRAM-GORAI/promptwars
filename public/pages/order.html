@@ -78,6 +78,12 @@
 
         const productMap = new Map(products.map(p => [p._id, p.image]));
 
+        // Filter disputes related to this specific order
+        const orderDisputes = disputes.filter(d => {
+          const dOrderId = d.orderId && typeof d.orderId === 'object' ? d.orderId._id : d.orderId;
+          return dOrderId && dOrderId.toString() === order._id.toString();
+        });
+
         let itemsHtml = '';
         order.items.forEach(item => {
           const imgUrl = productMap.get(item.productId);
@@ -86,6 +92,32 @@
             imgMarkup = `<img src="${imgUrl}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 6px; margin-right: 0.75rem;" onerror="this.onerror=null; this.outerHTML='<span style=&quot;font-size:1.8rem; margin-right:0.75rem;&quot;>📦</span>';">`;
           } else {
             imgMarkup = `<span style="font-size: 1.8rem; margin-right: 0.75rem;">${imgUrl || '📦'}</span>`;
+          }
+
+          // Check if this specific item has an active or resolved dispute
+          const itemDispute = orderDisputes.find(d => {
+            const dProductId = d.productId && typeof d.productId === 'object' ? d.productId._id : d.productId;
+            return dProductId && dProductId.toString() === item.productId.toString() && 
+                   ['PENDING', 'RESOLVED', 'HUMAN_REVIEW_REQUIRED', 'MORE_INFO_REQUIRED'].includes(d.status);
+          });
+
+          let actionMarkup = '';
+          if (itemDispute) {
+            let badgeLabel = 'Pending';
+            let badgeClass = 'badge-pending';
+            if (itemDispute.status === 'RESOLVED') {
+              badgeLabel = 'Refunded';
+              badgeClass = 'badge-resolved';
+            } else if (itemDispute.status === 'HUMAN_REVIEW_REQUIRED') {
+              badgeLabel = 'In Review';
+              badgeClass = 'badge-human_review_required';
+            } else if (itemDispute.status === 'MORE_INFO_REQUIRED') {
+              badgeLabel = 'Info Needed';
+              badgeClass = 'badge-more_info_required';
+            }
+            actionMarkup = `<span class="badge ${badgeClass}" style="font-size:0.72rem; padding:0.25rem 0.5rem; display:inline-block; margin-left:0.75rem;">${badgeLabel}</span>`;
+          } else {
+            actionMarkup = `<a href="/pages/dispute.html?orderId=${order._id}&productId=${item.productId}" class="btn btn-secondary" style="padding: 0.25rem 0.65rem; font-size: 0.72rem; border-radius: 6px; border-color: rgba(239, 68, 68, 0.35); color: var(--accent-danger); font-weight: 600; text-decoration: none; display: inline-block; margin-left:0.75rem; transition: all 0.2s;">Request Refund</a>`;
           }
 
           itemsHtml += `
@@ -97,77 +129,26 @@
                   <div style="font-size:0.8rem; color:var(--text-secondary);">Qty: ${item.quantity} &times; ₹${item.price.toFixed(2)}</div>
                 </div>
               </div>
-              <strong style="color:var(--text-primary);">₹${(item.price * item.quantity).toFixed(2)}</strong>
-            </div>
-          `;
-        });
-
-        // Filter disputes related to this specific order
-        const orderDisputes = disputes.filter(d => {
-          const dOrderId = d.orderId && typeof d.orderId === 'object' ? d.orderId._id : d.orderId;
-          return dOrderId && dOrderId.toString() === order._id.toString();
-        });
-
-        // Identify if there's any active or resolved claim
-        const activeOrResolved = orderDisputes.find(d => ['PENDING', 'RESOLVED', 'HUMAN_REVIEW_REQUIRED', 'MORE_INFO_REQUIRED'].includes(d.status));
-
-        let helpCardHtml = '';
-        if (activeOrResolved) {
-          let statusLabel = 'Dispute Under Review';
-          let statusDesc = 'Our AI Resolver or support team is currently reviewing your claim.';
-          let statusBadgeClass = 'badge-pending';
-          
-          if (activeOrResolved.status === 'RESOLVED') {
-            statusLabel = 'Refund Resolved';
-            statusDesc = `A refund of ₹${activeOrResolved.resolutionDetails.amount.toFixed(2)} has been successfully resolved and processed.`;
-            statusBadgeClass = 'badge-resolved';
-          } else if (activeOrResolved.status === 'HUMAN_REVIEW_REQUIRED') {
-            statusLabel = 'Human Review';
-            statusDesc = 'This claim has been escalated for manual human verification and log checks.';
-            statusBadgeClass = 'badge-human_review_required';
-          } else if (activeOrResolved.status === 'MORE_INFO_REQUIRED') {
-            statusLabel = 'Info Required';
-            statusDesc = activeOrResolved.resolutionDetails.message || 'Please submit the requested files to proceed.';
-            statusBadgeClass = 'badge-more_info_required';
-          }
-
-          let productDetail = '';
-          if (activeOrResolved.productId) {
-            const pId = activeOrResolved.productId._id || activeOrResolved.productId;
-            const dispProd = products.find(p => p._id === pId);
-            if (dispProd) {
-              productDetail = `<div style="font-size:0.8rem; margin:0.5rem 0; color:var(--text-secondary);">Disputed Item: <strong>${dispProd.name}</strong></div>`;
-            }
-          }
-
-          helpCardHtml = `
-            <div class="card" style="border-color:var(--border-color);">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                <h3 class="card-title" style="font-size:1.1rem; margin:0;">Dispute Status</h3>
-                <span class="badge ${statusBadgeClass}">${statusLabel}</span>
+              <div style="display:flex; align-items:center;">
+                <strong style="color:var(--text-primary);">₹${(item.price * item.quantity).toFixed(2)}</strong>
+                ${actionMarkup}
               </div>
-              <p class="card-desc" style="font-size:0.85rem; margin-bottom:1rem; line-height:1.4;">
-                ${statusDesc}
-              </p>
-              ${productDetail}
-              <a href="/pages/analyzing.html?disputeId=${activeOrResolved._id}" class="btn btn-secondary" style="width:100%; font-size:0.8rem; display:flex; align-items:center; justify-content:center;">
-                🔍 View Analysis Timeline
-              </a>
             </div>
           `;
-        } else {
-          helpCardHtml = `
-            <div class="card" style="background-color:rgba(190, 18, 60, 0.02); border-color:rgba(190, 18, 60, 0.15);">
-              <h3 class="card-title" style="font-size:1.1rem; color:var(--accent-danger);">Need help with this order?</h3>
-              <p class="card-desc" style="font-size:0.85rem; margin-bottom:1.25rem;">
-                If you were charged twice, didn't receive your refund, or if the product was received damaged, submit a claim. Our AI system will inspect your payment records and process it autonomously.
-              </p>
-              <a href="/pages/dispute.html?orderId=${order._id}&paymentId=${order.paymentId || ''}" class="btn btn-danger" style="width:100%;">
-                ⚠️ Report a Problem / File Dispute
-              </a>
-            </div>
-          `;
-        }
+        });
+
+        // Determine general order helpCard (billing/double charge option)
+        let helpCardHtml = `
+          <div class="card" style="background-color:rgba(15, 23, 42, 0.01); border-color:var(--border-color);">
+            <h3 class="card-title" style="font-size:1.1rem; color:var(--text-primary);">Other Order Issues?</h3>
+            <p class="card-desc" style="font-size:0.85rem; margin-bottom:1.25rem; line-height:1.4;">
+              For payment disputes (such as duplicate charges or incorrect invoice totals), submit a general billing inquiry.
+            </p>
+            <a href="/pages/dispute.html?orderId=${order._id}" class="btn btn-secondary" style="width:100%; font-size:0.8rem; display:flex; align-items:center; justify-content:center;">
+              ⚠️ Report Double Charge or Billing Issue
+            </a>
+          </div>
+        `;
 
         const orderDate = new Date(order.orderDate || order.createdAt).toLocaleString();
         const deliveryDate = order.deliveryDate ? new Date(order.deliveryDate).toLocaleString() : 'N/A';
