@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storefront - ResolveAI Autonomous Store</title>
+  <meta name="description" content="ResolveAI - From customer dispute to resolution automatically.">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/pages.css">
+  <style>
+    /* Custom tabs styling for Login portal */
+    .login-tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+    .login-tab {
+      flex: 1;
+      padding: 0.75rem;
+      text-align: center;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.2s ease;
+    }
+    .login-tab.active {
+      color: var(--accent-primary);
+      border-bottom-color: var(--accent-primary);
+    }
+    .login-tab-content {
+      display: none;
+    }
+    .login-tab-content.active {
+      display: block;
+    }
+    .google-btn {
+      background-color: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      margin-top: 1rem;
+      padding: 0.65rem;
+    }
+    .google-btn:hover {
+      background-color: #f9fafb;
+    }
+    .google-icon {
+      width: 18px;
+      height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header / Navigation Bar -->
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        RESOLVE<span>AI</span>
+        <span class="logo-sub">Store</span>
+      </a>
+      <ul class="nav-links" id="main-nav-links" style="display: none;">
+        <li><a href="/pages/store.html" class="nav-link active">Shop</a></li>
+        <li><a href="/pages/orders.html" class="nav-link">My Orders</a></li>
+        <li><span style="color: var(--text-secondary); font-size: 0.85rem;" id="user-display-email"></span></li>
+        <li><a href="#" class="btn btn-secondary" id="user-logout-btn" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">Sign Out</a></li>
+        <li>
+          <a href="/pages/cart.html" class="btn btn-secondary" style="padding: 0.4rem 1rem; border-radius: 8px;">
+            Cart (<span id="cart-count">0</span>)
+          </a>
+        </li>
+      </ul>
+    </div>
+  </header>
+
+  <main>
+    <!-- Welcome & Login Screen (shown when not authenticated) -->
+    <div id="auth-portal" style="max-width: 500px; margin: 3rem auto;">
+      <div class="card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <h1 style="font-size: 2.2rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.04em;">
+            RESOLVEAI
+          </h1>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">
+            From customer dispute to resolution — automatically.
+          </p>
+        </div>
+
+        <!-- Customer Portal Login Content -->
+        <div class="login-tab-content active" id="customer-login">
+          <form id="customer-auth-form">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.25rem;">
+              <button type="button" class="btn btn-secondary" id="btn-toggle-login" style="flex:1; padding:0.5rem; font-size:0.85rem; background-color: var(--bg-tertiary);" disabled>Log In Mode</button>
+              <button type="button" class="btn btn-secondary" id="btn-toggle-register" style="flex:1; padding:0.5rem; font-size:0.85rem;">Register Mode</button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="customer-email">Email Address</label>
+              <input type="email" class="form-input" id="customer-email" placeholder="customer@example.com" required>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label" for="customer-password">Password</label>
+              <input type="password" class="form-input" id="customer-password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="customer-submit-btn" style="width: 100%; margin-top: 0.5rem;">
+              Sign In
+            </button>
+          </form>
+
+          <div style="text-align: center; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <a href="/" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-weight: 600; text-decoration: none;">
+              🚀 View Project Capabilities Guide
+            </a>
+            <a href="/pages/admin/dashboard.html" class="btn btn-secondary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; text-decoration: none;">
+              🔐 Open Admin Dashboard Portal
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Store Catalog Section (hidden if not authenticated) -->
+    <div id="store-portal" style="display: none;">
+      <section class="card" style="margin-bottom: 2rem;">
+        <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.02em;">
+          ResolveAI Autonomous Store
+        </h1>
+        <p style="color: var(--text-secondary); max-width: 750px; font-size: 0.95rem; margin-bottom: 1.5rem;">
+          Select your items, simulate checking out, and inspect details. If you were charged twice or have a damaged delivery, raise a claim inside your orders portal.
+        </p>
+        <a href="/pages/orders.html" class="btn btn-primary">File a Dispute</a>
+      </section>
+
+      <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">Featured Products</h2>
+      <div class="product-grid" id="product-list">
+        <div style="text-align: center; grid-column: 1/-1; padding: 3rem; color: var(--text-secondary);">
+          Loading catalog products...
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 ResolveAI. Hackathon Project. Powered by Google Gemini.</p>
+  </footer>
+
+  <!-- Script 1: Pure UI Actions and Admin Login (Completely Resilient) -->
+  <script type="module">
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    // Tabs toggle
+    document.querySelectorAll('.login-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.login-tab-content').forEach(c => c.classList.remove('active'));
+        
+        e.currentTarget.classList.add('active');
+        const contentId = e.currentTarget.getAttribute('data-tab');
+        document.getElementById(contentId).classList.add('active');
+      });
+    });
+
+    // Customer login/register toggle buttons
+    window.isRegisterMode = false;
+    const btnToggleLogin = document.getElementById('btn-toggle-login');
+    const btnToggleRegister = document.getElementById('btn-toggle-register');
+    const customerSubmitBtn = document.getElementById('customer-submit-btn');
+
+    btnToggleLogin.addEventListener('click', () => {
+      window.isRegisterMode = false;
+      btnToggleLogin.disabled = true;
+      btnToggleLogin.style.backgroundColor = 'var(--bg-tertiary)';
+      btnToggleRegister.disabled = false;
+      btnToggleRegister.style.backgroundColor = '';
+      customerSubmitBtn.innerText = 'Sign In';
+    });
+
+    btnToggleRegister.addEventListener('click', () => {
+      window.isRegisterMode = true;
+      btnToggleRegister.disabled = true;
+      btnToggleRegister.style.backgroundColor = 'var(--bg-tertiary)';
+      btnToggleLogin.disabled = false;
+      btnToggleLogin.style.backgroundColor = '';
+      customerSubmitBtn.innerText = 'Register';
+    });
+
+  </script>
+
+  <!-- Script 2: Firebase Customer Authentication (Isolated) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword, 
+      createUserWithEmailAndPassword, 
+      signInWithRedirect, 
+      getRedirectResult, 
+      signInWithPopup,
+      GoogleAuthProvider, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { api } from '/js/api.js';
+    import { state } from '/js/state.js';
+
+    // Provided Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAmVe9j8K2Be0MPERatQXtKm8BuXzAL1Fs",
+      authDomain: "promptwars-ffcfa.firebaseapp.com",
+      projectId: "promptwars-ffcfa",
+      storageBucket: "promptwars-ffcfa.firebasestorage.app",
+      messagingSenderId: "1023900957716",
+      appId: "1:1023900957716:web:a1bf396220d76e89583b01",
+      measurementId: "G-MN5C07W4SX"
+    };
+
+    let auth;
+    let googleProvider;
+
+    try {
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      googleProvider = new GoogleAuthProvider();
+      console.log("[FIREBASE] Client SDK loaded and initialized successfully");
+
+      // Handle redirect sign-in resolution on load
+      getRedirectResult(auth)
+        .then(async (result) => {
+          if (result && result.user) {
+            const token = await result.user.getIdToken();
+            localStorage.setItem('customerToken', token);
+            console.log("[FIREBASE] Google Sign-In resolved from redirect successfully.");
+            window.location.reload();
+          }
+        })
+        .catch((err) => {
+          console.warn("[FIREBASE WARNING] Redirect result capture failed or empty:", err.message);
+        });
+
+      // Customer Email Auth submit
+      document.getElementById('customer-auth-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('customer-email').value;
+        const password = document.getElementById('customer-password').value;
+        const customerSubmitBtn = document.getElementById('customer-submit-btn');
+        
+        customerSubmitBtn.disabled = true;
+        customerSubmitBtn.innerText = window.isRegisterMode ? 'Creating Account...' : 'Signing In...';
+
+        try {
+          let userCredential;
+          if (window.isRegisterMode) {
+            userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            alert('Account created successfully! Welcome to ResolveAI Store.');
+          } else {
+            userCredential = await signInWithEmailAndPassword(auth, email, password);
+          }
+          
+          const token = await userCredential.user.getIdToken();
+          localStorage.setItem('customerToken', token);
+        } catch (err) {
+          console.error(err);
+          alert(`Authentication failed: ${err.message}`);
+          customerSubmitBtn.disabled = false;
+          customerSubmitBtn.innerText = window.isRegisterMode ? 'Register' : 'Sign In';
+        }
+      });
+
+
+      // Monitor Firebase Auth State
+      onAuthStateChanged(auth, async (user) => {
+        const authPortal = document.getElementById('auth-portal');
+        const storePortal = document.getElementById('store-portal');
+        const mainNavLinks = document.getElementById('main-nav-links');
+        const userDisplayEmail = document.getElementById('user-display-email');
+
+        if (user) {
+          const token = await user.getIdToken();
+          localStorage.setItem('customerToken', token);
+          
+          // Sync with Express backend to ensure customer user profile exists in MongoDB
+          try {
+            await api.get('/health/me');
+          } catch (syncErr) {
+            console.error('[AUTH ERROR] Failed to sync session profile with MongoDB:', syncErr.message);
+          }
+          
+          userDisplayEmail.innerText = user.email;
+          authPortal.style.display = 'none';
+          storePortal.style.display = 'block';
+          mainNavLinks.style.display = 'flex';
+          
+          // Update cart count
+          document.getElementById('cart-count').innerText = state.getCartCount();
+          loadStoreProducts();
+        } else {
+          // If customer is not authenticated in Firebase
+          // Verify if mock Admin is logged in instead
+          if (state.isAdminLoggedIn()) {
+            return;
+          }
+
+          localStorage.removeItem('customerToken');
+          userDisplayEmail.innerText = '';
+          authPortal.style.display = 'block';
+          storePortal.style.display = 'none';
+          mainNavLinks.style.display = 'none';
+        }
+      });
+
+      // Customer and Admin log out handler
+      document.getElementById('user-logout-btn').addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (state.isAdminLoggedIn()) {
+          state.logoutAdmin();
+          window.location.reload();
+        } else {
+          try {
+            await signOut(auth);
+            localStorage.removeItem('customerToken');
+            window.location.reload();
+          } catch (err) {
+            console.error('Error logging out customer', err);
+          }
+        }
+      });
+
+    } catch (fbError) {
+      console.error("[FIREBASE ERROR] Failed to initialize Firebase client SDK:", fbError.message);
+      
+      // Fallback: If Firebase failed to initialize (e.g. offline / network issues),
+      // we gracefully handle click events and alert the developer
+      document.getElementById('customer-auth-form').addEventListener('submit', () => {
+        alert("Firebase is currently offline or loading failed. Please log in as Admin or check network.");
+      });
+      document.getElementById('google-auth-btn').addEventListener('click', () => {
+        alert("Firebase Google Sign-In is unavailable because the Firebase SDK failed to initialize.");
+      });
+    }
+
+    // Helper to fetch store products list
+    const loadStoreProducts = async () => {
+      const container = document.getElementById('product-list');
+      try {
+        const products = await api.get('/api/products');
+        container.innerHTML = '';
+        
+        products.forEach(p => {
+          const card = document.createElement('div');
+          card.className = 'card product-card';
+          
+          let imgMarkup = '';
+          if (p.image && (p.image.startsWith('http') || p.image.startsWith('/') || p.image.includes('.'))) {
+            imgMarkup = `<img src="${p.image}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null; this.outerHTML='<span style=&quot;font-size:4rem;&quot;>📦</span>';">`;
+          } else {
+            imgMarkup = `<span style="font-size: 4rem;">${p.image || '📦'}</span>`;
+          }
+
+          card.innerHTML = `
+            <div class="product-img-wrapper" style="width: 100%; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; background: var(--bg-tertiary); border-radius: 8px; overflow: hidden; margin-bottom: 1rem;">
+              ${imgMarkup}
+            </div>
+            <div class="product-category">${p.category}</div>
+            <h3 class="card-title">${p.name}</h3>
+            <p class="card-desc" style="margin-bottom: 1rem; flex-grow: 1;">${p.description}</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:auto;">
+              <div class="product-price">₹${p.price.toFixed(2)}</div>
+              <button class="btn btn-primary add-to-cart-btn" data-id="${p._id}" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                Add to Cart
+              </button>
+            </div>
+          `;
+          
+          card.querySelector('.add-to-cart-btn').addEventListener('click', () => {
+            state.addToCart(p, 1);
+            alert(`Added ${p.name} to cart!`);
+          });
+
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<div style="color:var(--accent-danger); text-align:center; grid-column:1/-1;">Failed to load catalog products. ${err.message}</div>`;
+      }
+    };
+
+    // Listen for cart changes to update count badge dynamically
+    window.addEventListener('cart-updated', () => {
+      const cartCountEl = document.getElementById('cart-count');
+      if (cartCountEl) {
+        cartCountEl.innerText = state.getCartCount();
+      }
+    });
+  </script>
+</body>
+</html>
